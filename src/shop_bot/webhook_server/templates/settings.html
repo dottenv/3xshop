@@ -671,7 +671,7 @@
               <div class="form-text text-secondary">Если не заполнено — будет использован URL панели: {{ request.url_root | trim('/') }}/yoomoney/callback</div>
             </div>
             <div class="mb-3 d-flex flex-wrap gap-2">
-              <a class="btn btn-outline-primary" href="{{ url_for('yoomoney_connect_route') }}" title="Открыть окно авторизации YooMoney для выдачи токена">Подключить YooMoney (OAuth)</a>
+              <button type="button" class="btn btn-outline-primary" onclick="window.location.href='{{ url_for('yoomoney_connect_route') }}'" title="Открыть окно авторизации YooMoney для выдачи токена">Подключить YooMoney (OAuth)</button>
               <button type="submit"
                       class="btn btn-outline-secondary"
                       formmethod="post"
