@@ -1,4 +1,4 @@
-{% extends "Default/base.html" %} {% block title %}Главная страница{% endblock %} {% block content %}
+{% extends "../base.html" %} {% block title %}Главная страница{% endblock %} {% block content %}
 
 <div class="page-header d-print-none">
   <div class="row align-items-center">
@@ -10,7 +10,7 @@
   <div id="dash-stats" class="row row-deck row-cards mt-2"
        data-fetch-url="{{ url_for('dashboard_stats_partial') }}"
        data-fetch-interval="8000">
-    {% include 'partials/dashboard_stats.html' %}
+    {% include '../partials/dashboard_stats.html' %}
   </div>
   
 </div>
@@ -98,7 +98,7 @@
             <tbody id="dash-transactions"
                    data-fetch-url="{{ url_for('dashboard_transactions_partial', page=current_page) }}"
                    data-fetch-interval="10000">
-              {% include 'partials/dashboard_transactions.html' %}
+              {% include '../partials/dashboard_transactions.html' %}
             </tbody>
           </table>
         </div>
