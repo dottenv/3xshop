@@ -38,51 +38,58 @@ ACTION_CHOICE=""
 
 # Функция для определения типа обновления на основе изменений
 detect_update_type() {
-    if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
-        echo -e "${INFO} Анализ изменений для определения типа обновления..."
-        
-        # Получаем текущую ветку
-        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-        
-        # Получаем последние коммиты с обработкой ошибок
-        if ! git fetch origin 2>/dev/null; then
-            echo -e "${YELLOW} Не удалось получить изменения из Git. Пропускаем анализ.${NC}"
-            return 0
-        fi
-        
-        LOCAL_HASH=$(git rev-parse HEAD 2>/dev/null || echo "")
-        REMOTE_HASH=$(git rev-parse "origin/$CURRENT_BRANCH" 2>/dev/null || git rev-parse origin/main 2>/dev/null || echo "")
-        
-        if [ -z "$LOCAL_HASH" ] || [ -z "$REMOTE_HASH" ]; then
-            echo -e "${YELLOW} Не удалось определить версии Git. Пропускаем анализ.${NC}"
-            return 0
-        fi
-        
-        if [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
-            echo -e "${CHECKMARK} У вас последняя версия."
-            return 0
-        fi
-        
-        # Анализируем изменения в последних коммитах
-        CHANGES=$(git diff --name-only "$LOCAL_HASH" "$REMOTE_HASH" 2>/dev/null || "")
-        
-        if [ -z "$CHANGES" ]; then
-            echo -e "${YELLOW} Не удалось проанализировать изменения. Пропускаем анализ.${NC}"
-            return 0
-        fi
-        
-        # Проверяем наличие критичных файлов
-        if echo "$CHANGES" | grep -q -E "(docker-compose\.yml|Dockerfile|requirements\.txt|package\.json)"; then
-            echo -e "${YELLOW}Обнаружены изменения в Docker конфигурации."
-            echo -e "${INFO} Рекомендуется полное обновление (down + up)."
-            return 2  # Полное обновление
-        else
-            echo -e "${CHECKMARK} Только изменения в коде приложения."
-            echo -e "${INFO} Подходит для бесшовного обновления."
-            return 1  # Бесшовное обновление
-        fi
+    # Проверяем наличие git репозитория
+    if [ ! -d ".git" ]; then
+        return 0
     fi
-    return 0
+    
+    # Проверяем наличие docker-compose.yml
+    if [ ! -f "docker-compose.yml" ]; then
+        return 0
+    fi
+    
+    echo -e "${INFO} Анализ изменений для определения типа обновления..."
+    
+    # Получаем текущую ветку
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    
+    # Получаем последние коммиты с обработкой ошибок
+    if ! git fetch origin 2>/dev/null; then
+        echo -e "${YELLOW} Не удалось получить изменения из Git. Пропускаем анализ.${NC}"
+        return 0
+    fi
+    
+    LOCAL_HASH=$(git rev-parse HEAD 2>/dev/null || echo "")
+    REMOTE_HASH=$(git rev-parse "origin/$CURRENT_BRANCH" 2>/dev/null || git rev-parse origin/main 2>/dev/null || echo "")
+    
+    if [ -z "$LOCAL_HASH" ] || [ -z "$REMOTE_HASH" ]; then
+        echo -e "${YELLOW} Не удалось определить версии Git. Пропускаем анализ.${NC}"
+        return 0
+    fi
+    
+    if [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
+        echo -e "${CHECKMARK} У вас последняя версия."
+        return 0
+    fi
+    
+    # Анализируем изменения в последних коммитах
+    CHANGES=$(git diff --name-only "$LOCAL_HASH" "$REMOTE_HASH" 2>/dev/null || "")
+    
+    if [ -z "$CHANGES" ]; then
+        echo -e "${YELLOW} Не удалось проанализировать изменения. Пропускаем анализ.${NC}"
+        return 0
+    fi
+    
+    # Проверяем наличие критичных файлов
+    if echo "$CHANGES" | grep -q -E "(docker-compose\.yml|Dockerfile|requirements\.txt|package\.json)"; then
+        echo -e "${YELLOW}Обнаружены изменения в Docker конфигурации."
+        echo -e "${INFO} Рекомендуется полное обновление (down + up)."
+        return 2  # Полное обновление
+    else
+        echo -e "${CHECKMARK} Только изменения в коде приложения."
+        echo -e "${INFO} Подходит для бесшовного обновления."
+        return 1  # Бесшовное обновление
+    fi
 }
 
 echo -e "\n${BOLD}${CYAN}=====================================================${NC}"
@@ -95,12 +102,14 @@ if [ -f "$NGINX_CONF_FILE" ]; then
     # Автоматическое определение типа обновления
     RECOMMENDED_UPDATE=""
     if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
-        detect_update_type || true  # Игнорируем ошибки в функции
+        detect_update_type
         RECOMMENDED_UPDATE=$?
     elif [ -d "$PROJECT_DIR" ]; then
         cd "$PROJECT_DIR" || exit 1
-        detect_update_type || true  # Игнорируем ошибки в функции
-        RECOMMENDED_UPDATE=$?
+        if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
+            detect_update_type
+            RECOMMENDED_UPDATE=$?
+        fi
         cd ..
     fi
     
