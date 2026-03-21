@@ -1,67 +1,161 @@
+#!/bin/bash
+
+# --- Стили оформления ---
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 RED='\033[0;31m'
+BOLD='\033[1m'
 NC='\033[0m'
 
+# --- Иконки ---
+CHECKMARK="${GREEN}[OK]${NC}"
+ERROR="${RED}[ERR]${NC}"
+INFO="${CYAN}[INFO]${NC}"
+WAIT="${YELLOW}[WAIT]${NC}"
+
 handle_error() {
-    echo -e "\n${RED}Ошибка на строке $1. Установка прервана.${NC}"
+    echo -e "\n${ERROR} ${RED}Ошибка на строке $1. Установка прервана.${NC}"
     exit 1
 }
 trap 'handle_error $LINENO' ERR
 
 read_input() {
-    read -p "$1" "$2" < /dev/tty
+    echo -ne "${CYAN}${BOLD}$1${NC}"
+    read -r "$2" < /dev/tty
 }
 
 read_input_yn() {
-    read -p "$1" -n 1 -r REPLY < /dev/tty
+    echo -ne "${CYAN}${BOLD}$1${NC}"
+    read -n 1 -r REPLY < /dev/tty
     echo
 }
 
-REPO_URL="https://github.com/tweopi/3xui-shopbot.git"
-PROJECT_DIR="3xui-shopbot"
+REPO_URL="https://github.com/dottenv/3xshop.git"
+PROJECT_DIR="3xshop"
 NGINX_CONF_FILE="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
+ACTION_CHOICE=""
 
-echo -e "${GREEN}--- Запуск скрипта установки/обновления 3xui-ShopBot ---${NC}"
+echo -e "\n${BOLD}${CYAN}=====================================================${NC}"
+echo -e "${BOLD}${CYAN}      Запуск установки/обновления 3xui-ShopBot    ${NC}"
+echo -e "${BOLD}${CYAN}=====================================================${NC}\n"
 
 if [ -f "$NGINX_CONF_FILE" ]; then
-    echo -e "\n${CYAN}Обнаружена существующая конфигурация. Скрипт запущен в режиме обновления.${NC}"
-
-    if [ ! -d "$PROJECT_DIR" ]; then
-        echo -e "${RED}Ошибка: Конфигурация Nginx существует, но папка проекта '${PROJECT_DIR}' не найдена!${NC}"
-        echo -e "${YELLOW}Возможно, вы переместили или удалили папку. Для исправления удалите файл конфигурации Nginx и запустите установку заново:${NC}"
-        echo -e "sudo rm ${NGINX_CONF_FILE}"
-        exit 1
-    fi
-
-    cd $PROJECT_DIR
-
-    echo -e "\n${CYAN}Шаг 1: Обновление кода из репозитория Git...${NC}"
-    git pull
-    echo -e "${GREEN}✔ Код успешно обновлен.${NC}"
-
-    echo -e "\n${CYAN}Шаг 2: Пересборка и перезапуск Docker-контейнеров...${NC}"
-    sudo docker-compose down --remove-orphans && sudo docker-compose up -d --build
+    echo -e "${INFO} ${CYAN}Обнаружена существующая конфигурация.${NC}"
+    echo -e "${BOLD}Выберите действие:${NC}"
+    echo -e " 1) Обновить код и перезапустить бота"
+    echo -e " 2) Полная переустановка (сброс Nginx, SSL и Docker)"
+    echo -e " 3) Выход"
     
-    echo -e "\n\n${GREEN}==============================================${NC}"
-    echo -e "${GREEN}      🎉 Обновление успешно завершено! 🎉      ${NC}"
-    echo -e "${GREEN}==============================================${NC}"
-    echo -e "\nБот был обновлен до последней версии и перезапущен."
+    read_input "Ваш выбор (1-3): " ACTION_CHOICE
+    
+    case $ACTION_CHOICE in
+        1)
+            echo -e "${INFO} ${CYAN}Режим обновления/восстановления...${NC}"
+            STASHED=false
+            # Проверяем, не находимся ли мы уже внутри папки проекта
+            if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
+                echo -e "${INFO} Вы уже находитесь в папке проекта."
+            elif [ -d "$PROJECT_DIR" ]; then
+                cd "$PROJECT_DIR" || exit 1
+            else
+                echo -e "${YELLOW}Папка проекта '${PROJECT_DIR}' не найдена, но конфиг Nginx существует.${NC}"
+                read_input_yn "Хотите клонировать репозиторий заново? (y/n): "
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    git clone "$REPO_URL"
+                    cd "$PROJECT_DIR" || exit 1
+                else
+                    echo -e "${ERROR} ${RED}Ошибка: Папка проекта '${PROJECT_DIR}' не найдена!${NC}"
+                    echo -e "${YELLOW}Для исправления удалите конфиг Nginx и запустите заново:${NC}"
+                    echo -e "sudo rm ${NGINX_CONF_FILE}"
+                    exit 1
+                fi
+            fi
 
-    exit 0
+            echo -e "\n${WAIT} ${BOLD}Шаг 1: Обновление кода из Git...${NC}"
+            # Сохраняем локальные изменения перед обновлением, чтобы избежать конфликтов
+            if [ -n "$(git status --porcelain)" ]; then
+                echo -e "${INFO} Сохранение локальных изменений..."
+                git stash push -m "Installer auto-stash before update"
+                STASHED=true
+            fi
+
+            if git pull; then
+                echo -e "${CHECKMARK} Код успешно обновлен."
+            else
+                echo -e "${ERROR} ${RED}Ошибка при обновлении. Пробуем разрешить конфликт...${NC}"
+                git stash pop 2>/dev/null
+                exit 1
+            fi
+
+            if [ "$STASHED" = true ]; then
+                 echo -e "${INFO} Восстановление локальных изменений..."
+                 if ! git stash pop 2>/dev/null; then
+                     echo -e "${YELLOW}ВНИМАНИЕ: Возник конфликт при восстановлении ваших изменений.${NC}"
+                     echo -e "${YELLOW}Файлы были обновлены из репозитория, ваши правки сохранены в Git stash.${NC}"
+                 fi
+             fi
+
+            echo -e "\n${WAIT} ${BOLD}Шаг 2: Перезапуск Docker-контейнеров...${NC}"
+            sudo docker-compose down --remove-orphans && sudo docker-compose up -d --build
+            
+            echo -e "\n${BOLD}${GREEN}==============================================${NC}"
+            echo -e "${BOLD}${GREEN}      Обновление успешно завершено!      ${NC}"
+            echo -e "${BOLD}${GREEN}==============================================${NC}"
+            echo -e "\nБот был обновлен до последней версии и перезапущен."
+            exit 0
+            ;;
+        2)
+            echo -e "${WAIT} ${RED}Запуск полной переустановки...${NC}"
+            # Очистка Docker
+            if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
+                sudo docker-compose down --remove-orphans 2>/dev/null
+            elif [ -d "$PROJECT_DIR" ]; then
+                cd "$PROJECT_DIR" && sudo docker-compose down --remove-orphans 2>/dev/null && cd ..
+                # Предложим удалить старую папку
+                read_input_yn "Удалить старую папку проекта для чистого клонирования? (y/n): "
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    sudo rm -rf "$PROJECT_DIR"
+                    echo -e "${CHECKMARK} Папка проекта удалена."
+                fi
+            fi
+            # Очистка Nginx
+            NGINX_ENABLED_FILE="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
+            sudo rm -f "$NGINX_CONF_FILE" "$NGINX_ENABLED_FILE"
+            echo -e "${CHECKMARK} Конфигурации Nginx удалены."
+            # Переход к чистой установке
+            ;;
+        *)
+            echo "Выход."
+            exit 0
+            ;;
+    esac
 fi
 
-echo -e "\n${YELLOW}Существующая конфигурация не найдена. Запускается первоначальная установка...${NC}"
-
-echo -e "\n${CYAN}Шаг 1: Установка системных зависимостей...${NC}"
-install_package() {
-    if ! command -v $1 &> /dev/null; then
-        echo -e "${YELLOW}Утилита '$1' не найдена. Устанавливаем...${NC}"
-        sudo apt-get update
-        sudo apt-get install -y $2
+if [ -z "$ACTION_CHOICE" ] || [ "$ACTION_CHOICE" = "2" ]; then
+    if [ "$ACTION_CHOICE" = "2" ]; then
+        echo -e "${INFO} ${YELLOW}Старая конфигурация удалена. Начинаем чистую установку...${NC}"
     else
-        echo -e "${GREEN}✔ $1 уже установлен.${NC}"
+        echo -e "${INFO} ${YELLOW}Конфигурация не найдена. Начинаем чистую установку...${NC}"
+    fi
+fi
+
+echo -e "\n${BOLD}Шаг 1: Подготовка системных зависимостей...${NC}"
+
+install_package() {
+    if ! command -v "$1" &> /dev/null; then
+        echo -e "${WAIT} Устанавливаем '$1'..."
+        sudo apt-get update -qq
+        sudo apt-get install -y "$2" > /dev/null 2>&1
+        if ! command -v "$1" &> /dev/null; then
+            # Проверка для certbot, который может быть в /usr/bin/certbot но не в PATH
+            if [ -f "/usr/bin/$1" ]; then
+                sudo ln -sf "/usr/bin/$1" "/usr/local/bin/$1"
+            fi
+        fi
+        echo -e "   ${CHECKMARK} $1 установлен."
+    else
+        echo -e "   ${CHECKMARK} $1 уже готов."
     fi
 }
 
@@ -70,137 +164,237 @@ install_package "docker" "docker.io"
 install_package "docker-compose" "docker-compose"
 install_package "nginx" "nginx"
 install_package "curl" "curl"
-install_package "certbot" "certbot python3-certbot-nginx"
 install_package "dig" "dnsutils"
+install_package "socat" "socat"
+
+# Предварительная очистка Nginx перед запуском
+if [ -f "/etc/nginx/sites-enabled/default" ]; then
+    echo -e "${WAIT} Удаляем стандартную конфигурацию Nginx..."
+    sudo rm -f /etc/nginx/sites-enabled/default
+fi
 
 for service in docker nginx; do
-    if ! sudo systemctl is-active --quiet $service; then
-        echo -e "${YELLOW}Сервис $service не запущен. Запускаем и добавляем в автозагрузку...${NC}"
-        sudo systemctl start $service
-        sudo systemctl enable $service
+    if ! sudo systemctl is-active --quiet "$service"; then
+        echo -e "${WAIT} Запускаем сервис $service..."
+        if ! sudo systemctl start "$service"; then
+            echo -e "${ERROR} ${RED}Не удалось запустить $service. Проверьте логи: journalctl -u $service${NC}"
+            exit 1
+        fi
+        sudo systemctl enable "$service" > /dev/null 2>&1
     fi
 done
-echo -e "${GREEN}✔ Все системные зависимости установлены.${NC}"
+echo -e "${CHECKMARK} Все системные зависимости настроены."
 
-echo -e "\n${CYAN}Шаг 2: Клонирование репозитория...${NC}"
-if [ ! -d "$PROJECT_DIR" ]; then
-    git clone $REPO_URL
+echo -e "\n${BOLD}Шаг 2: Подготовка репозитория...${NC}"
+if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
+    echo -e "${CHECKMARK} Вы уже находитесь в папке проекта."
+elif [ -d "$PROJECT_DIR" ]; then
+    echo -e "${INFO} Папка проекта уже существует. Переходим в нее..."
+    cd "$PROJECT_DIR" || exit 1
+else
+    echo -e "${WAIT} Клонирование репозитория..."
+    git clone "$REPO_URL"
+    cd "$PROJECT_DIR" || exit 1
 fi
-cd $PROJECT_DIR
-echo -e "${GREEN}✔ Репозиторий готов.${NC}"
+echo -e "${CHECKMARK} Репозиторий готов."
 
-echo -e "\n${CYAN}Шаг 3: Настройка домена и получение SSL-сертификатов...${NC}"
+echo -e "\n${BOLD}Шаг 3: Настройка домена и SSL...${NC}"
 
-read_input "Введите ваш домен (например, my-vpn-shop.com): " USER_INPUT_DOMAIN
+read_input "Введите ваш домен (или IP-адрес): " USER_INPUT_DOMAIN
 
 if [ -z "$USER_INPUT_DOMAIN" ]; then
-    echo -e "${RED}Ошибка: Домен не может быть пустым. Установка прервана.${NC}"
+    echo -e "${ERROR} ${RED}Домен или IP не может быть пустым.${NC}"
     exit 1
 fi
 
-# Санитизация домена: убрать схему/путь, оставить только ASCII-символы доменного имени
-DOMAIN=$(echo "$USER_INPUT_DOMAIN" \
-    | sed -e 's%^https\?://%%' -e 's%/.*$%%' \
-    | tr -cd 'A-Za-z0-9.-' \
-    | tr '[:upper:]' '[:lower:]')
-
-read_input "Введите ваш email (для регистрации SSL-сертификатов Let's Encrypt): " EMAIL
-
-echo -e "${GREEN}✔ Домен для работы: ${DOMAIN}${NC}"
-
-# Получение публичного IPv4 сервера без вывода HTML
-ipv4_re='^([0-9]{1,3}\.){3}[0-9]{1,3}$'
-get_server_ip(){
-    for url in \
-        "https://api.ipify.org" \
-        "https://ifconfig.co/ip" \
-        "https://ipv4.icanhazip.com"; do
-        ip=$(curl -fsS "$url" 2>/dev/null | tr -d '\r\n\t ')
-        if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
-    done
-    # Fallback: локальная информация (может вернуть приватный IP)
-    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-    if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; else echo ""; fi
+# Проверка, является ли ввод IP-адресом
+is_ip() {
+    local ip=$1
+    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
-# Разрешение IPv4 домена без обязательного dig
-resolve_domain_ip(){
-    # 1) getent hosts (glibc)
-    ip=$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk '{print $1}' | head -n1)
-    if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
-    # 2) dig, если доступен
-    if command -v dig >/dev/null 2>&1; then
-        ip=$(dig +short A "$DOMAIN" 2>/dev/null | grep -E "$ipv4_re" | head -n1)
-        if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
-    fi
-    # 3) nslookup, если доступен
-    if command -v nslookup >/dev/null 2>&1; then
-        ip=$(nslookup -type=A "$DOMAIN" 2>/dev/null | awk '/^Address: /{print $2; exit}')
-        if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
-    fi
-    # 4) ping -c1 (как крайний случай)
-    if command -v ping >/dev/null 2>&1; then
-        ip=$(ping -4 -c1 -W1 "$DOMAIN" 2>/dev/null | sed -n 's/.*(\([0-9.]*\)).*/\1/p' | head -n1)
-        if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
-    fi
-    echo ""
-}
-
-SERVER_IP=$(get_server_ip)
-DOMAIN_IP=$(resolve_domain_ip)
-
-if [ -n "$SERVER_IP" ]; then
-    echo -e "${YELLOW}IP вашего сервера: $SERVER_IP${NC}"
+DOMAIN=$(echo "$USER_INPUT_DOMAIN" | sed -e 's%^https\?://%%' -e 's%/.*$%%' | tr -cd 'A-Za-z0-9.-' | tr '[:upper:]' '[:lower:]')
+IS_IP_ADDR=false
+if is_ip "$DOMAIN"; then
+    IS_IP_ADDR=true
+    echo -e "${INFO} Обнаружен IP-адрес. Установка будет выполнена без SSL."
 else
-    echo -e "${YELLOW}IP вашего сервера: (не удалось определить)${NC}"
+    read_input "Введите ваш email (для SSL): " EMAIL
 fi
 
-if [ -n "$DOMAIN_IP" ]; then
-    echo -e "${YELLOW}IP, на который указывает домен '$DOMAIN': $DOMAIN_IP${NC}"
+if [ "$IS_IP_ADDR" = false ]; then
+    # Установка acme.sh (метод как в 3x-ui), если еще не установлен
+    if [ ! -f "$HOME/.acme.sh/acme.sh" ]; then
+        echo -e "${WAIT} Установка acme.sh..."
+        curl -sL https://get.acme.sh | sh -s email="$EMAIL" > /dev/null 2>&1
+        "$HOME/.acme.sh/acme.sh" --set-default-ca --server letsencrypt --force > /dev/null 2>&1
+        echo -e "   ${CHECKMARK} acme.sh установлен."
+    fi
+
+    echo -e "${INFO} Работаем с доменом: ${BOLD}${DOMAIN}${NC}"
+
+    # Получение публичного IPv4 сервера без вывода HTML
+    ipv4_re='^([0-9]{1,3}\.){3}[0-9]{1,3}$'
+    get_server_ip(){
+        for url in \
+            "https://api.ipify.org" \
+            "https://ifconfig.co/ip" \
+            "https://ipv4.icanhazip.com"; do
+            ip=$(curl -fsS "$url" 2>/dev/null | tr -d '\r\n\t ')
+            if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
+        done
+        # Fallback: локальная информация (может вернуть приватный IP)
+        ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+        if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; else echo ""; fi
+    }
+
+    # Разрешение IPv4 домена без обязательного dig
+    resolve_domain_ip(){
+        # 1) getent hosts (glibc)
+        ip=$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk '{print $1}' | head -n1)
+        if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
+        # 2) dig, если доступен
+        if command -v dig >/dev/null 2>&1; then
+            ip=$(dig +short A "$DOMAIN" 2>/dev/null | grep -E "$ipv4_re" | head -n1)
+            if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
+        fi
+        # 3) nslookup, если доступен
+        if command -v nslookup >/dev/null 2>&1; then
+            ip=$(nslookup -type=A "$DOMAIN" 2>/dev/null | awk '/^Address: /{print $2; exit}')
+            if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
+        fi
+        # 4) ping -c1 (как крайний случай)
+        if command -v ping >/dev/null 2>&1; then
+            ip=$(ping -4 -c1 -W1 "$DOMAIN" 2>/dev/null | sed -n 's/.*(\([0-9.]*\)).*/\1/p' | head -n1)
+            if [[ $ip =~ $ipv4_re ]]; then echo "$ip"; return 0; fi
+        fi
+        echo ""
+    }
+
+    SERVER_IP=$(get_server_ip)
+    DOMAIN_IP=$(resolve_domain_ip)
+
+    if [ -n "$SERVER_IP" ]; then
+        echo -e "   ${INFO} IP сервера: ${BOLD}$SERVER_IP${NC}"
+    fi
+
+    if [ -n "$DOMAIN_IP" ]; then
+        echo -e "   ${INFO} IP домена:  ${BOLD}$DOMAIN_IP${NC}"
+    fi
+
+    if [ "$SERVER_IP" != "$DOMAIN_IP" ]; then
+        echo -e "\n${RED}${BOLD}ВНИМАНИЕ: DNS-запись домена не указывает на этот сервер!${NC}"
+        read_input_yn "Продолжить установку? (y/n): "
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Установка прервана."; exit 1; fi
+    fi
+fi
+
+if command -v ufw &> /dev/null; then
+    echo -e "${WAIT} Настройка файрвола (ufw)..."
+    sudo ufw allow 80/tcp > /dev/null 2>&1
+    sudo ufw allow 443/tcp > /dev/null 2>&1
+    sudo ufw allow 1488/tcp > /dev/null 2>&1
+    # На всякий случай открываем и 8443, если кто-то захочет использовать его
+    sudo ufw allow 8443/tcp > /dev/null 2>&1
+elif command -v iptables &> /dev/null; then
+    echo -e "${WAIT} Настройка файрвола (iptables)..."
+    sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT > /dev/null 2>&1
+    sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT > /dev/null 2>&1
+fi
+
+if [ "$IS_IP_ADDR" = false ]; then
+     CERT_PATH="/etc/letsencrypt/live/$DOMAIN"
+     mkdir -p "$CERT_PATH"
+
+     if [ -f "$CERT_PATH/fullchain.pem" ]; then
+         echo -e "${CHECKMARK} SSL-сертификаты для домена ${BOLD}$DOMAIN${NC} уже существуют."
+         
+         # Проверка срока действия сертификата
+         EXP_DATE=$(sudo openssl x509 -enddate -noout -in "$CERT_PATH/fullchain.pem" | cut -d= -f2)
+         echo -e "   ${INFO} Срок действия: ${YELLOW}$EXP_DATE${NC}"
+         
+         read_input_yn "Перевыпустить сертификат? (y/n): "
+         if [[ $REPLY =~ ^[Yy]$ ]]; then
+             echo -e "${WAIT} Перевыпуск сертификата..."
+             sudo systemctl stop nginx
+             if "$HOME/.acme.sh/acme.sh" --issue -d "$DOMAIN" --standalone --httpport 80 --force && \
+                "$HOME/.acme.sh/acme.sh" --install-cert -d "$DOMAIN" --key-file "$CERT_PATH/privkey.pem" --fullchain-file "$CERT_PATH/fullchain.pem"; then
+                 echo -e "${CHECKMARK} Сертификат успешно обновлен."
+             else
+                 echo -e "${ERROR} ${RED}Ошибка при перевыпуске сертификата.${NC}"
+                 sudo systemctl start nginx
+                 exit 1
+             fi
+             sudo systemctl start nginx
+         fi
+     else
+         echo -e "${WAIT} Получение SSL-сертификатов через acme.sh..."
+         sudo systemctl stop nginx
+         if "$HOME/.acme.sh/acme.sh" --issue -d "$DOMAIN" --standalone --httpport 80 && \
+            "$HOME/.acme.sh/acme.sh" --install-cert -d "$DOMAIN" --key-file "$CERT_PATH/privkey.pem" --fullchain-file "$CERT_PATH/fullchain.pem"; then
+             echo -e "${CHECKMARK} SSL-сертификаты успешно получены."
+         else
+             echo -e "\n${ERROR} ${RED}acme.sh не смог получить сертификат.${NC}"
+             echo -e "${YELLOW}Возможные причины:${NC}"
+             echo -e " 1. Порт 80 занят другим процессом."
+             echo -e " 2. Домен не указывает на этот сервер."
+             echo -e " 3. Проблема с доступом к серверам Let's Encrypt."
+             sudo systemctl start nginx
+             read_input_yn "Продолжить без SSL? (y/n): "
+             if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
+         fi
+         sudo systemctl start nginx
+     fi
+ else
+     echo -e "${INFO} Пропуск настройки SSL для IP-адреса."
+ fi
+
+echo -e "\n${BOLD}Шаг 4: Настройка Nginx...${NC}"
+# Настройка портов и URL (переход на стандартные 80/443)
+if [ "$IS_IP_ADDR" = false ] && [ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
+    HAS_SSL=true
+    NGINX_LISTEN_PORT=443
+    BASE_URL="https://${DOMAIN}"
 else
-    echo -e "${YELLOW}IP, на который указывает домен '$DOMAIN': (не удалось определить)${NC}"
+    HAS_SSL=false
+    NGINX_LISTEN_PORT=80
+    BASE_URL="http://${DOMAIN}"
+    if [ "$IS_IP_ADDR" = false ]; then
+        echo -e "${YELLOW}Внимание: SSL-сертификаты не найдены. Конфигурация Nginx будет создана без SSL (порт 80).${NC}"
+    fi
 fi
-
-if [ "$SERVER_IP" != "$DOMAIN_IP" ]; then
-    echo -e "${RED}ВНИМАНИЕ: DNS-запись для домена $DOMAIN не указывает на IP-адрес этого сервера!${NC}"
-    read_input_yn "Продолжить установку? (y/n): "
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Установка прервана."; exit 1; fi
-fi
-
-if command -v ufw &> /dev/null && sudo ufw status | grep -q 'Status: active'; then
-    echo -e "${YELLOW}Обнаружен активный файрвол (ufw). Открываем порты...${NC}"
-    sudo ufw allow 80/tcp
-    sudo ufw allow 443/tcp
-    sudo ufw allow 1488/tcp
-    sudo ufw allow 8443/tcp
-fi
-
-if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
-    echo -e "${GREEN}✔ SSL-сертификаты для домена $DOMAIN уже существуют.${NC}"
-else
-    echo -e "${YELLOW}Получаем SSL-сертификаты для $DOMAIN...${NC}"
-    sudo certbot --nginx -d $DOMAIN --email $EMAIL --agree-tos --non-interactive --redirect
-    echo -e "${GREEN}✔ SSL-сертификаты успешно получены.${NC}"
-fi
-
-echo -e "\n${CYAN}Шаг 4: Настройка Nginx...${NC}"
-read_input "Какой порт вы будете использовать для вебхуков YooKassa? (443 или 8443, рекомендуется 8443): " YOOKASSA_PORT_INPUT
-YOOKASSA_PORT=${YOOKASSA_PORT_INPUT:-443}
 
 NGINX_ENABLED_FILE="/etc/nginx/sites-enabled/${PROJECT_DIR}.conf"
 
-echo -e "Создаем конфигурацию Nginx..."
-sudo rm -rf /etc/nginx/sites-enabled/default
-sudo bash -c "cat > $NGINX_CONF_FILE" <<EOF
+echo -e "${WAIT} Создание конфигурации Nginx..."
+
+# Генерация конфигурации Nginx
+if [ "$HAS_SSL" = true ]; then
+    cat <<EOF | sudo tee "$NGINX_CONF_FILE" > /dev/null
 server {
-    listen ${YOOKASSA_PORT} ssl http2;
-    listen [::]:${YOOKASSA_PORT} ssl http2;
+    listen 80;
+    server_name ${DOMAIN};
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen ${NGINX_LISTEN_PORT} ssl http2;
     server_name ${DOMAIN};
 
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # SSL hardening
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_tickets off;
 
     location / {
         proxy_pass http://127.0.0.1:1488;
@@ -211,33 +405,56 @@ server {
     }
 }
 EOF
+else
+    cat <<EOF | sudo tee "$NGINX_CONF_FILE" > /dev/null
+server {
+    listen ${NGINX_LISTEN_PORT};
+    server_name ${DOMAIN};
+
+    location / {
+        proxy_pass http://127.0.0.1:1488;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+fi
 
 if [ ! -f "$NGINX_ENABLED_FILE" ]; then
-    sudo ln -s $NGINX_CONF_FILE $NGINX_ENABLED_FILE
+    sudo ln -s "$NGINX_CONF_FILE" "$NGINX_ENABLED_FILE"
 fi
 
-echo -e "${GREEN}✔ Конфигурация Nginx создана.${NC}"
-echo -e "${YELLOW}Проверяем и перезагружаем Nginx...${NC}"
+echo -e "${WAIT} Проверка и перезагрузка Nginx..."
 sudo nginx -t && sudo systemctl reload nginx
+echo -e "${CHECKMARK} Nginx настроен."
 
-echo -e "\n${CYAN}Шаг 5: Сборка и запуск Docker-контейнера...${NC}"
+echo -e "\n${BOLD}Шаг 5: Запуск Docker...${NC}"
+
 if [ "$(sudo docker-compose ps -q)" ]; then
-    sudo docker-compose down
+    echo -e "${WAIT} Перезапуск существующих контейнеров..."
+    sudo docker-compose down > /dev/null 2>&1
 fi
-sudo docker-compose up -d --build
 
-echo -e "\n\n${GREEN}=====================================================${NC}"
-echo -e "${GREEN}      🎉 Установка и запуск успешно завершены! 🎉      ${NC}"
-echo -e "${GREEN}=====================================================${NC}"
-echo -e "\nВеб-панель доступна по адресу:"
-echo -e "  - ${YELLOW}https://${DOMAIN}:${YOOKASSA_PORT}/login${NC}"
-echo -e "\nДанные для первого входа:"
-echo -e "  - Логин:   ${CYAN}admin${NC}"
-echo -e "  - Пароль:  ${CYAN}admin${NC}"
-echo -e "\n${RED}ПЕРВЫЕ ШАГИ:${NC}"
-echo -e "1. Войдите в панель и ${RED}сразу же смените логин и пароль${NC}."
-echo -e "2. На странице 'Настройки' введите ваш Telegram токен, username бота и ваш Telegram ID."
-echo -e "3. Нажмите 'Сохранить' и затем 'Запустить Бота'."
-echo -e "\n${CYAN}Не забудьте указать URL для вебхуков в YooKassa:${NC}"
-echo -e "  - ${YELLOW}https://${DOMAIN}:${YOOKASSA_PORT}/yookassa-webhook${NC}"
-echo -e "\n"
+sudo docker-compose up -d --build
+echo -e "${CHECKMARK} Контейнеры запущены."
+
+echo -e "\n${BOLD}${GREEN}=====================================================${NC}"
+echo -e "${BOLD}${GREEN}      Установка и запуск успешно завершены!      ${NC}"
+echo -e "${BOLD}${GREEN}=====================================================${NC}"
+
+echo -e "\n${BOLD}Веб-панель доступна по адресу:${NC}"
+echo -e "  [URL] ${YELLOW}${BASE_URL}/login${NC}"
+
+echo -e "\n${BOLD}Данные для входа:${NC}"
+echo -e "  [Login]   ${CYAN}admin${NC}"
+echo -e "  [Pass]  ${CYAN}admin${NC}"
+
+echo -e "\n${BOLD}${RED}ПЕРВЫЕ ШАГИ:${NC}"
+echo -e " 1. Войдите в панель и ${BOLD}смените логин/пароль${NC}."
+echo -e " 2. В 'Настройках' укажите токен бота и ваш Telegram ID."
+echo -e " 3. Нажмите 'Сохранить' и 'Запустить Бота'."
+
+echo -e "\n${INFO} ${CYAN}Webhook URL для YooKassa:${NC}"
+echo -e " ${YELLOW}${BASE_URL}/yookassa-webhook${NC}\n"
