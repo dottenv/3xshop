@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+		<meta name="description" content="3xui-shopbot - Панель управления VPN сервисом" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>{% block title %}Панель управления{% endblock %}</title>
+		
+		<!-- Tabler CSS -->
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/tabler.min.css') }}">
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/tabler-icons.css') }}">
+		
+		<!-- Custom styles -->
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+		
+		<style>
+			/* Flat theme overrides */
+			:root {
+				--tblr-primary: #667eea;
+				--tblr-primary-rgb: 102, 126, 234;
+				--tblr-secondary: #64748b;
+				--tblr-success: #10b981;
+				--tblr-info: #06b6d4;
+				--tblr-warning: #f59e0b;
+				--tblr-danger: #ef4444;
+				--tblr-light: #f8fafc;
+				--tblr-dark: #1e293b;
+			}
+			
+			body {
+				background: #f8fafc;
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			}
+			
+			.page-wrapper {
+				background: #f8fafc;
+			}
+			
+			.page {
+				background: #f8fafc;
+				padding: 1rem;
+			}
+			
+			.navbar {
+				background: white !important;
+				border-bottom: 1px solid #e5e7eb !important;
+				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+			}
+			
+			.navbar-brand {
+				color: #1e293b !important;
+				font-weight: 600;
+			}
+			
+			.sidebar {
+				background: white !important;
+				border-right: 1px solid #e5e7eb !important;
+			}
+			
+			.nav-link {
+				color: #4b5563 !important;
+				border-radius: 6px;
+				margin: 0.25rem 0;
+				transition: all 0.2s ease;
+			}
+			
+			.nav-link:hover {
+				background: #f3f4f6 !important;
+				color: #1e293b !important;
+			}
+			
+			.nav-link.active {
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+				color: white !important;
+			}
+			
+			.card {
+				background: white !important;
+				border: 1px solid #e5e7eb !important;
+				border-radius: 12px !important;
+				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+			}
+			
+			.btn {
+				border-radius: 8px !important;
+				font-weight: 500 !important;
+				transition: all 0.2s ease !important;
+			}
+			
+			.btn-primary {
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+				border: none !important;
+			}
+			
+			.btn-primary:hover {
+				transform: translateY(-1px) !important;
+				box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+			}
+			
+			.table {
+				background: white !important;
+				border-radius: 8px !important;
+				overflow: hidden !important;
+			}
+			
+			.table th {
+				background: #f8fafc !important;
+				color: #374151 !important;
+				font-weight: 600 !important;
+				border-bottom: 2px solid #e5e7eb !important;
+			}
+			
+			.form-control {
+				border: 2px solid #e5e7eb !important;
+				border-radius: 8px !important;
+				transition: all 0.2s ease !important;
+			}
+			
+			.form-control:focus {
+				border-color: #667eea !important;
+				box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+			}
+			
+			/* Dark theme */
+			[data-bs-theme="dark"] body {
+				background: #0f172a;
+				color: #e2e8f0;
+			}
+			
+			[data-bs-theme="dark"] .page-wrapper,
+			[data-bs-theme="dark"] .page {
+				background: #0f172a;
+			}
+			
+			[data-bs-theme="dark"] .navbar,
+			[data-bs-theme="dark"] .sidebar,
+			[data-bs-theme="dark"] .card {
+				background: #1e293b !important;
+				border-color: #334155 !important;
+			}
+			
+			[data-bs-theme="dark"] .nav-link {
+				color: #e2e8f0 !important;
+			}
+			
+			[data-bs-theme="dark"] .nav-link:hover {
+				background: #334155 !important;
+				color: #f1f5f9 !important;
+			}
+			
+			[data-bs-theme="dark"] .form-control {
+				background: #1e293b !important;
+				border-color: #334155 !important;
+				color: #e2e8f0 !important;
+			}
+		</style>
+		
+		{% block head %}{% endblock %}
+	</head>
+	<body>
+		<div class="page">
+			{% block content %}{% endblock %}
+		</div>
+		
+		<!-- Tabler JS -->
+		<script src="{{ url_for('static', filename='js/tabler.min.js') }}"></script>
+		
+		{% block scripts %}{% endblock %}
+	</body>
+</html>

@@ -1,0 +1,32 @@
+<table class="flat-table">
+  <thead>
+    <tr>
+      <th>Пользователь</th>
+      <th>Тема</th>
+      <th>Статус</th>
+      <th>Обновлен</th>
+      <th class="w-1">Действия</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ticket in tickets %}
+    <tr>
+      <td>{{ ticket.user_id or '—' }}</td>
+      <td>{{ ticket.subject or 'Без темы' }}</td>
+      <td>
+        {% if ticket.status == 'open' %}
+          <span style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">Открыт</span>
+        {% else %}
+          <span style="background: #dcfce7; color: #166534; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">Закрыт</span>
+        {% endif %}
+      </td>
+      <td>{{ ticket.updated_at or '—' }}</td>
+      <td>
+        <a href="{{ url_for('support_ticket_page', ticket_id=ticket.ticket_id) }}" class="btn btn-sm" style="background: #667eea; color: white; border-radius: 6px; padding: 0.25rem 0.75rem;">
+          Открыть
+        </a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

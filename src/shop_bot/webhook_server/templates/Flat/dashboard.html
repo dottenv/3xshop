@@ -1,0 +1,207 @@
+{% extends "Default/base.html" %} {% block title %}Главная страница{% endblock %} {% block content %}
+
+<style>
+	.flat-stats {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+		gap: 1.5rem;
+		margin-bottom: 2rem;
+	}
+	
+	.flat-stat-card {
+		background: white;
+		border-radius: 12px;
+		padding: 1.5rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		border: 1px solid #f1f3f5;
+		transition: all 0.2s ease;
+	}
+	
+	.flat-stat-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+	}
+	
+	.flat-stat-number {
+		font-size: 2rem;
+		font-weight: 700;
+		color: #1e293b;
+		margin-bottom: 0.5rem;
+	}
+	
+	.flat-stat-label {
+		color: #64748b;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+	
+	.flat-chart-container {
+		background: white;
+		border-radius: 12px;
+		padding: 1.5rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		border: 1px solid #f1f3f5;
+		margin-bottom: 2rem;
+	}
+	
+	.flat-transactions {
+		background: white;
+		border-radius: 12px;
+		padding: 1.5rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		border: 1px solid #f1f3f5;
+	}
+	
+	.flat-table {
+		border-collapse: collapse;
+		width: 100%;
+	}
+	
+	.flat-table th {
+		background: #f8fafc;
+		padding: 0.75rem 1rem;
+		text-align: left;
+		font-weight: 600;
+		color: #374151;
+		border-bottom: 2px solid #e5e7eb;
+	}
+	
+	.flat-table td {
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid #f3f4f6;
+		color: #4b5563;
+	}
+	
+	.flat-table tr:hover {
+		background: #f9fafb;
+	}
+	
+	.page-header {
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: white;
+		padding: 2rem 0;
+		margin: -2rem -2rem 2rem -2rem;
+		text-align: center;
+	}
+	
+	.page-title {
+		font-size: 2rem;
+		font-weight: 700;
+		margin: 0;
+	}
+	
+	.text-secondary {
+		opacity: 0.9;
+		font-size: 1rem;
+	}
+</style>
+
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Главная</h2>
+      <div class="text-secondary">Сводка и ключевые метрики</div>
+    </div>
+  </div>
+</div>
+
+<!-- Статистика -->
+<div class="flat-stats">
+	<div class="flat-stat-card">
+		<div class="flat-stat-number">{{ stats.user_count or 0 }}</div>
+		<div class="flat-stat-label">Пользователи</div>
+	</div>
+	
+	<div class="flat-stat-card">
+		<div class="flat-stat-number">{{ stats.total_keys or 0 }}</div>
+		<div class="flat-stat-label">Ключи</div>
+	</div>
+	
+	<div class="flat-stat-card">
+		<div class="flat-stat-number">{{ stats.total_spent or 0 }}₽</div>
+		<div class="flat-stat-label">Доход</div>
+	</div>
+	
+	<div class="flat-stat-card">
+		<div class="flat-stat-number">{{ stats.host_count or 0 }}</div>
+		<div class="flat-stat-label">Хосты</div>
+	</div>
+</div>
+
+<div class="row row-cards">
+  <div class="col-lg-7">
+    <!-- График новых пользователей -->
+    <div class="flat-chart-container">
+      <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Новые пользователи (30 дней)</h3>
+      <div style="height: 280px; background: #f8fafc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b;">
+        📊 График будет доступен в следующей версии
+      </div>
+    </div>
+    
+    <!-- График новых ключей -->
+    <div class="flat-chart-container">
+      <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Новые ключи (30 дней)</h3>
+      <div style="height: 280px; background: #f8fafc; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b;">
+        🔑 График будет доступен в следующей версии
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <!-- Последние транзакции -->
+    <div class="flat-transactions">
+      <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Последние транзакции</h3>
+      
+      {% if transactions %}
+        <table class="flat-table">
+          <thead>
+            <tr>
+              <th>Пользователь</th>
+              <th>Хост</th>
+              <th>План</th>
+              <th>Цена</th>
+              <th>Дата</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for transaction in transactions[:8] %}
+            <tr>
+              <td>{{ transaction.user_id or '—' }}</td>
+              <td>{{ transaction.host_name or '—' }}</td>
+              <td>{{ transaction.plan_name or '—' }}</td>
+              <td>{{ transaction.amount or 0 }}₽</td>
+              <td>{{ transaction.created_date or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        
+        {% if total_pages > 1 %}
+        <div class="d-flex justify-content-center mt-3">
+          <ul class="pagination">
+            <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('dashboard_page', page=current_page - 1) }}" aria-label="Previous">«</a>
+            </li>
+            {% for p in range(1, total_pages + 1) %}
+            <li class="page-item {% if p == current_page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('dashboard_page', page=p) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('dashboard_page', page=current_page + 1) }}" aria-label="Next">»</a>
+            </li>
+          </ul>
+        </div>
+        {% endif %}
+      {% else %}
+        <div style="text-align: center; padding: 2rem; color: #64748b;">
+          💳 Транзакций пока нет
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

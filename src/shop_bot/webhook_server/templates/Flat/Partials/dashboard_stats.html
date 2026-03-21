@@ -1,0 +1,21 @@
+<div class="flat-stats">
+	<div class="flat-stat-card">
+		<div class="flat-stat-number">{{ stats.user_count or 0 }}</div>
+		<div class="flat-stat-label">Пользователи</div>
+	</div>
+	
+	<div class="flat-stat-card">
+		<div class="flat-stat-number">{{ stats.total_keys or 0 }}</div>
+		<div class="flat-stat-label">Ключи</div>
+	</div>
+	
+	<div class="flat-stat-card">
+		<div class="flat-stat-number">{{ stats.total_spent or 0 }}₽</div>
+		<div class="flat-stat-label">Доход</div>
+	</div>
+	
+	<div class="flat-stat-card">
+		<div class="flat-stat-number">{{ stats.host_count or 0 }}</div>
+		<div class="flat-stat-label">Хосты</div>
+	</div>
+</div>
