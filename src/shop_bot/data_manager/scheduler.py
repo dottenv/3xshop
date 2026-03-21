@@ -380,7 +380,6 @@ async def _maybe_run_update_check():
         _last_update_check_run_at = now
         
         # Сохраняем результат в базу данных
-        from datetime import datetime
         database.update_setting("last_update_check", now.isoformat())
         database.update_setting("update_available", "true" if result.get("available") else "false")
         if result.get("latest_version"):

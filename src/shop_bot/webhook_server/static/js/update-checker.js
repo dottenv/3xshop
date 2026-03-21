@@ -1,4 +1,6 @@
 // --- System Update Checker ---
+import { getCsrfToken } from './modules/core.js';
+
 let updateCheckInterval = null;
 let updateNotificationShown = false;
 
@@ -20,7 +22,7 @@ async function checkForUpdates(showNotification = true) {
 function showUpdateNotification(data) {
     const message = `
         <div class="update-notification">
-            <h5 class="mb-2">🚀 Доступно обновление!</h5>
+            <h5 class="mb-2">Доступно обновление!</h5>
             <p class="mb-2">Текущая версия: <strong>${data.current_version || 'неизвестно'}</strong></p>
             <p class="mb-2">Новая версия: <strong>${data.latest_version || 'неизвестно'}</strong></p>
             <p class="mb-3">Отстаёте на <strong>${data.commits_behind}</strong> коммит(ов)</p>
