@@ -36,22 +36,144 @@ PROJECT_DIR="3xshop"
 NGINX_CONF_FILE="/etc/nginx/sites-available/${PROJECT_DIR}.conf"
 ACTION_CHOICE=""
 
+# Функция для определения типа обновления на основе изменений
+detect_update_type() {
+    if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
+        echo -e "${INFO} Анализ изменений для определения типа обновления..."
+        
+        # Получаем последние коммиты
+        git fetch origin
+        LOCAL_HASH=$(git rev-parse HEAD)
+        REMOTE_HASH=$(git rev-parse origin/main)
+        
+        if [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
+            echo -e "${CHECKMARK} У вас последняя версия."
+            return 0
+        fi
+        
+        # Анализируем изменения в последних коммитах
+        CHANGES=$(git diff --name-only "$LOCAL_HASH" "$REMOTE_HASH")
+        
+        # Проверяем наличие критичных файлов
+        if echo "$CHANGES" | grep -q -E "(docker-compose\.yml|Dockerfile|requirements\.txt|package\.json)"; then
+            echo -e "${YELLOW}Обнаружены изменения в Docker конфигурации."
+            echo -e "${INFO} Рекомендуется полное обновление (down + up)."
+            return 2  # Полное обновление
+        else
+            echo -e "${CHECKMARK} Только изменения в коде приложения."
+            echo -e "${INFO} Подходит для бесшовного обновления."
+            return 1  # Бесшовное обновление
+        fi
+    fi
+    return 0
+}
+
 echo -e "\n${BOLD}${CYAN}=====================================================${NC}"
 echo -e "${BOLD}${CYAN}      Запуск установки/обновления 3xui-ShopBot    ${NC}"
 echo -e "${BOLD}${CYAN}=====================================================${NC}\n"
 
 if [ -f "$NGINX_CONF_FILE" ]; then
     echo -e "${INFO} ${CYAN}Обнаружена существующая конфигурация.${NC}"
-    echo -e "${BOLD}Выберите действие:${NC}"
-    echo -e " 1) Обновить код и перезапустить бота"
-    echo -e " 2) Полная переустановка (сброс Nginx, SSL и Docker)"
-    echo -e " 3) Выход"
     
-    read_input "Ваш выбор (1-3): " ACTION_CHOICE
+    # Автоматическое определение типа обновления
+    RECOMMENDED_UPDATE=""
+    if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
+        detect_update_type
+        RECOMMENDED_UPDATE=$?
+    elif [ -d "$PROJECT_DIR" ]; then
+        cd "$PROJECT_DIR" || exit 1
+        detect_update_type
+        RECOMMENDED_UPDATE=$?
+        cd ..
+    fi
+    
+    echo -e "${BOLD}Выберите действие:${NC}"
+    echo -e " 1) Бесшовное обновление (recreate контейнеров)"
+    echo -e " 2) Полное обновление (down + up)"
+    echo -e " 3) Полная переустановка (сброс Nginx, SSL и Docker)"
+    echo -e " 4) Выход"
+    
+    # Показываем рекомендацию, если доступна
+    if [ "$RECOMMENDED_UPDATE" = "1" ]; then
+        echo -e "\n${GREEN}💡 Рекомендуется: Бесшовное обновление (только код)${NC}"
+    elif [ "$RECOMMENDED_UPDATE" = "2" ]; then
+        echo -e "\n${YELLOW}⚠️  Рекомендуется: Полное обновление (изменения в Docker)${NC}"
+    fi
+    
+    read_input "Ваш выбор (1-4): " ACTION_CHOICE
     
     case $ACTION_CHOICE in
         1)
-            echo -e "${INFO} ${CYAN}Режим обновления/восстановления...${NC}"
+            echo -e "${INFO} ${CYAN}Бесшовное обновление (seamless update)...${NC}"
+            # Проверяем, не находимся ли мы уже внутри папки проекта
+            if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
+                echo -e "${INFO} Вы уже находитесь в папке проекта."
+            elif [ -d "$PROJECT_DIR" ]; then
+                cd "$PROJECT_DIR" || exit 1
+            else
+                echo -e "${YELLOW}Папка проекта '${PROJECT_DIR}' не найдена, но конфиг Nginx существует.${NC}"
+                read_input_yn "Хотите клонировать репозиторий заново? (y/n): "
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    git clone "$REPO_URL"
+                    cd "$PROJECT_DIR" || exit 1
+                else
+                    echo -e "${ERROR} ${RED}Ошибка: Папка проекта '${PROJECT_DIR}' не найдена!${NC}"
+                    echo -e "${YELLOW}Для исправления удалите конфиг Nginx и запустите заново:${NC}"
+                    echo -e "sudo rm ${NGINX_CONF_FILE}"
+                    exit 1
+                fi
+            fi
+
+            echo -e "\n${WAIT} ${BOLD}Шаг 1: Обновление кода из Git...${NC}"
+            # Сохраняем локальные изменения перед обновлением
+            if [ -n "$(git status --porcelain)" ]; then
+                echo -e "${INFO} Сохранение локальных изменений..."
+                git stash push -m "Installer auto-stash before seamless update"
+                STASHED=true
+            fi
+
+            if git pull; then
+                echo -e "${CHECKMARK} Код успешно обновлен."
+            else
+                echo -e "${ERROR} ${RED}Ошибка при обновлении. Пробуем разрешить конфликт...${NC}"
+                git stash pop 2>/dev/null
+                exit 1
+            fi
+
+            if [ "$STASHED" = true ]; then
+                 echo -e "${INFO} Восстановление локальных изменений..."
+                 if ! git stash pop 2>/dev/null; then
+                     echo -e "${YELLOW}ВНИМАНИЕ: Возник конфликт при восстановлении ваших изменений.${NC}"
+                     echo -e "${YELLOW}Файлы были обновлены из репозитория, ваши правки сохранены в Git stash.${NC}"
+                 fi
+             fi
+
+            echo -e "\n${WAIT} ${BOLD}Шаг 2: Бесшовное обновление контейнеров...${NC}"
+            echo -e "${INFO} Создание новых контейнеров с сохранением данных..."
+            
+            # Бесшовное обновление: recreate вместо down/up
+            sudo docker-compose pull
+            sudo docker-compose up -d --build --force-recreate --remove-orphans
+            
+            # Проверяем статус контейнеров
+            echo -e "${INFO} Проверка статуса контейнеров..."
+            sleep 5
+            if sudo docker-compose ps | grep -q "Up"; then
+                echo -e "${CHECKMARK} Контейнеры успешно перезапущены."
+            else
+                echo -e "${YELLOW}ВНИМАНИЕ: Некоторые контейнеры могут не запуститься. Проверьте логи:${NC}"
+                echo -e "sudo docker-compose logs"
+            fi
+            
+            echo -e "\n${BOLD}${GREEN}==============================================${NC}"
+            echo -e "${BOLD}${GREEN}     Бесшовное обновление завершено!       ${NC}"
+            echo -e "${BOLD}${GREEN}==============================================${NC}"
+            echo -e "\nБот был обновлен до последней версии с минимальным простоем."
+            echo -e "Данные пользователей и настройки сохранены."
+            exit 0
+            ;;
+        2)
+            echo -e "${INFO} ${CYAN}Полное обновление (down + up)...${NC}"
             STASHED=false
             # Проверяем, не находимся ли мы уже внутри папки проекта
             if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
@@ -96,7 +218,7 @@ if [ -f "$NGINX_CONF_FILE" ]; then
                  fi
              fi
 
-            echo -e "\n${WAIT} ${BOLD}Шаг 2: Перезапуск Docker-контейнеров...${NC}"
+            echo -e "\n${WAIT} ${BOLD}Шаг 2: Полный перезапуск Docker-контейнеров...${NC}"
             sudo docker-compose down --remove-orphans && sudo docker-compose up -d --build
             
             echo -e "\n${BOLD}${GREEN}==============================================${NC}"
@@ -105,7 +227,7 @@ if [ -f "$NGINX_CONF_FILE" ]; then
             echo -e "\nБот был обновлен до последней версии и перезапущен."
             exit 0
             ;;
-        2)
+        3)
             echo -e "${WAIT} ${RED}Запуск полной переустановки...${NC}"
             # Очистка Docker
             if [ -d ".git" ] && [ -f "docker-compose.yml" ]; then
@@ -458,3 +580,28 @@ echo -e " 3. Нажмите 'Сохранить' и 'Запустить Бота
 
 echo -e "\n${INFO} ${CYAN}Webhook URL для YooKassa:${NC}"
 echo -e " ${YELLOW}${BASE_URL}/yookassa-webhook${NC}\n"
+
+echo -e "\n${BOLD}${CYAN}=====================================================${NC}"
+echo -e "${BOLD}${CYAN}               Методы обновления                ${NC}"
+echo -e "${BOLD}${CYAN}=====================================================${NC}\n"
+
+echo -e "${BOLD}1) Бесшовное обновление (seamless):${NC}"
+echo -e "   • Использует 'docker-compose up --force-recreate'"
+echo -e "   • Минимальный простой (5-10 секунд)"
+echo -e "   • Данные сохраняются в Docker volumes"
+echo -e "   • Идеально для мелких апдейтов и исправлений"
+echo -e "   • Сохраняет активные сессии пользователей\n"
+
+echo -e "${BOLD}2) Полное обновление (down + up):${NC}"
+echo -e "   • Полная остановка и запуск контейнеров"
+echo -e "   • Более длительный простой (30-60 секунд)"
+echo -e "   • Гарантированная чистое состояние"
+echo -e "   • Рекомендуется для крупных изменений\n"
+
+echo -e "${BOLD}3) Полная переустановка:${NC}"
+echo -e "   • Удаление всех конфигураций"
+echo -e "   • Чистая установка с нуля"
+echo -e "   • Используется при серьезных проблемах\n"
+
+echo -e "${INFO} ${YELLOW}Для быстрого обновления используйте:${NC}"
+echo -e "   ${CYAN}./install.sh${NC} и выберите опцию 1\n"

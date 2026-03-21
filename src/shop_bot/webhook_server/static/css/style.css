@@ -9,6 +9,49 @@ body.layout-sidebar {
   color: var(--text-primary);
 }
 
+/* Liquid Glass Effect - iOS Style */
+.btn-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.3), 
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn-glass:hover::before {
+  left: 100%;
+}
+
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.btn-glass:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
 /* Sidebar */
 .sidebar {
   position: fixed;
@@ -16,18 +59,24 @@ body.layout-sidebar {
   left: 0;
   width: 280px;
   height: 100vh;
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-color);
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   z-index: 1000;
   transition: transform 0.3s ease;
+  border-radius: 0 20px 20px 0;
 }
 
 .sidebar-header {
   padding: 1.5rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-card);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0 20px 0 0;
 }
 
 .sidebar-brand {
@@ -49,7 +98,7 @@ body.layout-sidebar {
 .sidebar-brand .brand-link img {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 .sidebar-brand #brand-title {
@@ -60,6 +109,8 @@ body.layout-sidebar {
   margin-left: auto;
   opacity: 0.7;
   transition: opacity 0.2s;
+  padding: 0.5rem;
+  border-radius: 8px;
 }
 
 .sidebar-brand #brand-edit:hover {
@@ -90,20 +141,42 @@ body.layout-sidebar {
   padding: 0.75rem 1rem;
   color: var(--text-secondary);
   text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow: hidden;
+}
+
+.nav-link::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.1), 
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.nav-link:hover::before {
+  left: 100%;
 }
 
 .nav-link:hover {
-  background: color-mix(in oklab, var(--primary-color) 12%, transparent);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
+  transform: translateX(4px);
 }
 
 .nav-link.active {
-  background: color-mix(in oklab, var(--primary-color) 20%, transparent);
+  background: rgba(255, 255, 255, 0.15);
   color: var(--primary-color);
   font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .nav-link i {
@@ -123,8 +196,11 @@ body.layout-sidebar {
 /* Sidebar Footer */
 .sidebar-footer {
   padding: 1rem;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-card);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0 0 20px 0;
 }
 
 .bot-control {
@@ -151,15 +227,120 @@ body.layout-sidebar {
   gap: 0.75rem;
 }
 
-.user-controls span {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
+.logout-form {
+  width: 100%;
 }
 
-.user-controls .btn {
-  font-size: 0.875rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 6px;
+.btn-logout {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Theme Toggle - iOS Style */
+.theme-toggle-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-toggle-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.3), 
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.theme-toggle-btn:hover::before {
+  left: 100%;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.theme-toggle-track {
+  width: 48px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  position: relative;
+  transition: background 0.3s ease;
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #ffffff, #f0f0f0);
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle-thumb i {
+  font-size: 10px;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.theme-icon-dark {
+  display: none;
+}
+
+.theme-icon-light {
+  display: block;
+}
+
+/* Dark theme state */
+[data-bs-theme="dark"] .theme-toggle-track {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-bs-theme="dark"] .theme-toggle-thumb {
+  transform: translateX(24px);
+  background: linear-gradient(135deg, #4a5568, #2d3748);
+}
+
+[data-bs-theme="dark"] .theme-icon-dark {
+  display: block;
+  color: #fff;
+}
+
+[data-bs-theme="dark"] .theme-icon-light {
+  display: none;
 }
 
 /* Main Content */
@@ -168,6 +349,7 @@ body.layout-sidebar {
   min-height: 100vh;
   padding: 2rem;
   transition: margin-left 0.3s ease;
+  background: var(--bg-app);
 }
 
 /* Mobile Sidebar Toggle */
@@ -177,17 +359,20 @@ body.layout-sidebar {
   top: 1rem;
   left: 1rem;
   z-index: 1001;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .sidebar-toggle:hover {
-  background: color-mix(in oklab, var(--primary-color) 12%, transparent);
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
 /* Mobile Responsive */
@@ -226,6 +411,8 @@ body.layout-sidebar {
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 @media (max-width: 768px) {

@@ -128,7 +128,7 @@ export function initializeDashboardPage() {
             const div = document.createElement('div');
             div.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
             div.dataset.value = opt.value;
-            div.innerHTML = `<span style="opacity:.75">${opt.textContent||''}</span> <span class="ms-1 text-warning">⚡</span>`;
+            div.innerHTML = `<span style="opacity:.75">${opt.textContent||''}</span> <span class="ms-1 text-warning"><i class="ti ti-bolt"></i></span>`;
             div.addEventListener('click', () => {
                 selectEl.value = opt.value;
                 menuEl.querySelectorAll('.soft-select-item').forEach(el => el.classList.remove('is-active'));

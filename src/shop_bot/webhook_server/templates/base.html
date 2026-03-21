@@ -36,7 +36,9 @@
 						<img src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип" />
 						<span id="brand-title" class="ms-2">{{ brand_title or 'T‑Shift VPN' }}</span>
 					</a>
-					<button type="button" id="brand-edit" class="btn btn-outline-secondary btn-sm btn-glass" title="Сменить название">✏️</button>
+					<button type="button" id="brand-edit" class="btn btn-outline-secondary btn-sm btn-glass" title="Сменить название">
+						<i class="ti ti-edit"></i>
+					</button>
 				</div>
 			</div>
 			
@@ -99,33 +101,42 @@
 					{% if bot_status.is_running %}
 					<p class="status-running"><span class="status-dot status-dot-animated bg-green"></span>Статус: <strong>Запущен</strong></p>
 					<form action="{{ url_for('stop_both_bots_route') }}" method="post">
-						<button type="submit" class="btn btn-danger btn-sm">
-							Остановить
+						<button type="submit" class="btn btn-danger btn-sm btn-glass">
+							<i class="ti ti-player-stop"></i> Остановить
 						</button>
 					</form>
 					{% else %}
 					<p class="status-stopped"><span class="status-dot"></span>Статус: <strong>Остановлен</strong></p>
 					{% if all_settings_ok and support_settings_ok %}
 					<form action="{{ url_for('start_both_bots_route') }}" method="post">
-						<button type="submit" class="btn btn-success btn-sm">
-							Запустить
+						<button type="submit" class="btn btn-success btn-sm btn-glass">
+							<i class="ti ti-player-play"></i> Запустить
 						</button>
 					</form>
 					{% else %}
-					<button class="btn btn-secondary btn-sm" disabled>
-						Запустить
+					<button class="btn btn-secondary btn-sm btn-glass" disabled>
+						<i class="ti ti-player-play"></i> Запустить
 					</button>
 					{% endif %} {% endif %}
 				</div>
 				
 				<div class="user-controls">
-					<span>Вы вошли в систему.</span>
-					<form action="{{ url_for('logout_page') }}" method="post" style="display: inline">
-						<button type="submit" class="btn btn-outline-secondary">Выйти</button>
+					<form action="{{ url_for('logout_page') }}" method="post" class="logout-form">
+						<button type="submit" class="btn btn-outline-danger btn-glass btn-logout">
+							<i class="ti ti-logout"></i> Выйти
+						</button>
 					</form>
-					<button type="button" id="theme-toggle" class="btn btn-outline-primary ms-2" title="Переключить тему">
-						<span class="theme-label">Тёмная</span>
-					</button>
+					
+					<div class="theme-toggle-container">
+						<button type="button" id="theme-toggle" class="theme-toggle-btn" title="Переключить тему">
+							<div class="theme-toggle-track">
+								<div class="theme-toggle-thumb">
+									<i class="ti ti-sun theme-icon-light"></i>
+									<i class="ti ti-moon theme-icon-dark"></i>
+								</div>
+							</div>
+						</button>
+					</div>
 				</div>
 			</div>
 		</aside>
