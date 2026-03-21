@@ -329,6 +329,14 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label" for="panel_template">Шаблон админ-панели</label>
+                            <select class="form-select pill-md" id="panel_template" name="panel_template">
+                                <option value="Default" {{ 'selected' if settings.panel_template == 'Default' else '' }}>Default (Стандартный)</option>
+                            </select>
+                            <div class="form-text">Выберите шаблон оформления админ-панели. Доступные шаблоны находятся в папке templates/.</div>
+                        </div>
+
+                        <div class="mb-3">
                           <div class="row g-2 align-items-start">
                             <div class="col-12 col-md-5">
                               <label class="form-label">Бэкап базы</label>
