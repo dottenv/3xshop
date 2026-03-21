@@ -73,6 +73,7 @@ ALL_SETTINGS_KEYS = [
     "support_bot_token", "support_bot_username",
     # UI
     "panel_brand_title",
+    "panel_template",
     # Backups
     "backup_interval_days",
     # Monitoring
