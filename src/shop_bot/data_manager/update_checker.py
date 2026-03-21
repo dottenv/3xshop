@@ -159,6 +159,7 @@ def check_updates_available() -> dict:
     Возвращает словарь с информацией об обновлениях.
     """
     if not check_git_available():
+        logger.debug("Git недоступен для проверки обновлений")
         return {
             "available": False,
             "error": "Git недоступен или проект не является git репозиторием",
@@ -174,7 +175,12 @@ def check_updates_available() -> dict:
         commits_behind = get_commit_count_behind()
         changelog = get_changelog_behind() if commits_behind > 0 else []
         
-        available = commits_behind > 0 or (current_version and latest_version and current_version != latest_version)
+        logger.debug(f"Update check: current={current_version}, latest={latest_version}, commits_behind={commits_behind}")
+        
+        # Обновление доступно только если есть отставание по коммитам
+        available = commits_behind > 0
+        
+        logger.info(f"Update available: {available} (commits_behind={commits_behind})")
         
         return {
             "available": available,
