@@ -1,0 +1,168 @@
+{% extends "Flat/base.html" %} {% block title %}Управление Пользователями{% endblock %} {% block content %}
+
+<!-- CSRF Token -->
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+<style>
+	.flat-users-container {
+		background: white;
+		border-radius: 12px;
+		padding: 1.5rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		border: 1px solid #e5e7eb;
+	}
+	
+	.flat-search {
+		display: flex;
+		gap: 1rem;
+		margin-bottom: 2rem;
+		align-items: center;
+	}
+	
+	.flat-table {
+		border-collapse: collapse;
+		width: 100%;
+		background: white;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+	
+	.flat-table th {
+		background: #f8fafc;
+		padding: 1rem;
+		text-align: left;
+		font-weight: 600;
+		color: #374151;
+		border-bottom: 2px solid #e5e7eb;
+	}
+	
+	.flat-table td {
+		padding: 1rem;
+		border-bottom: 1px solid #f3f4f6;
+		color: #4b5563;
+	}
+	
+	.flat-table tr:hover {
+		background: #f9fafb;
+	}
+	
+	.btn-flat {
+		background: #f3f4f6;
+		color: #1e293b;
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+		padding: 0.5rem 1rem;
+		font-size: 0.875rem;
+		transition: all 0.2s ease;
+	}
+	
+	.btn-flat:hover {
+		background: #e5e7eb;
+		color: #1e293b;
+	}
+	
+	.btn-primary-flat {
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: white;
+		border: none;
+	}
+	
+	.btn-primary-flat:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+	}
+	
+	.badge-flat {
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
+		font-size: 0.75rem;
+		font-weight: 500;
+	}
+	
+	.badge-success {
+		background: #dcfce7;
+		color: #166534;
+	}
+	
+	.badge-danger {
+		background: #fee2e2;
+		color: #991b1b;
+	}
+</style>
+
+<div class="page-header d-print-none">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title">Пользователи</h2>
+      <div class="text-secondary">Список зарегистрированных пользователей</div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <div class="flat-search">
+        <input id="users-search" type="text" class="form-control" placeholder="Поиск по ID или Username..." value="{{ q or '' }}" style="border-radius: 8px; border: 2px solid #e5e7eb;" />
+        <select id="users-per-page" class="form-control" style="border-radius: 8px; border: 2px solid #e5e7eb;" title="На странице">
+          {% set _pp = per_page or 20 %}
+          <option value="10" {% if _pp == 10 %}selected{% endif %}>10</option>
+          <option value="20" {% if _pp == 20 %}selected{% endif %}>20</option>
+          <option value="50" {% if _pp == 50 %}selected{% endif %}>50</option>
+          <option value="100" {% if _pp == 100 %}selected{% endif %}>100</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flat-users-container">
+  <div class="table-responsive">
+    <table class="flat-table">
+      <thead>
+        <tr>
+          <th>Telegram ID</th>
+          <th>Username</th>
+          <th>Статус</th>
+          <th>Активные ключи</th>
+          <th>Баланс</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td class="user-id">{{ user.telegram_id }}</td>
+          <td class="user-name">@{{ user.username or 'N/A' }}</td>
+          <td>
+            {% if user.is_banned %}
+              <span class="badge-flat badge-danger">Забанен</span>
+            {% else %}
+              <span class="badge-flat badge-success">Активен</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if user.user_keys %} {{ user.user_keys | length }} шт. {% else %} 0 {% endif %}
+          </td>
+          <td>{{ '%.2f'|format(user.balance or 0) }}</td>
+          <td>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <a class="btn-flat btn-primary-flat" href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}" style="text-decoration: none;">
+                🗝️ Ключи
+              </a>
+              {% if user.is_banned %}
+              <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn-flat" style="background: #dcfce7; color: #166534;">Разбанить</button>
+              </form>
+              {% else %}
+              <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn-flat" style="background: #fee2e2; color: #991b1b;">Забанить</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
