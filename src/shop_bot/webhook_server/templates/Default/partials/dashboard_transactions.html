@@ -1,11 +1,31 @@
 {% for tx in transactions %}
 <tr>
-  <td>
-    {{ tx.username or 'N/A' }}<br><small class="text-secondary">({{ tx.user_id }})</small>
+  <td class="py-1">
+    <div class="d-flex align-items-center">
+      <div class="flex-grow-1">
+        <div class="font-weight-medium text-truncate" style="max-width: 120px;" title="{{ tx.username or 'N/A' }}">
+          {{ tx.username or 'N/A' }}
+        </div>
+        <div class="text-secondary small text-truncate" style="max-width: 120px;">
+          {{ tx.user_id }}
+        </div>
+      </div>
+    </div>
   </td>
-  <td>{{ tx.host_name }}</td>
-  <td>{{ tx.plan_name }}</td>
-  <td>{{ tx.amount_rub | round(2) }} RUB</td>
-  <td>{{ tx.created_date.split(' ')[0] }}</td>
+  <td class="py-1">
+    <span class="badge badge-outline text-secondary fw-normal">
+      {{ tx.plan_name }}
+    </span>
+  </td>
+  <td class="py-1">
+    <div class="fw-bold text-nowrap">
+      {{ tx.amount_rub | round(1) }} <small>₽</small>
+    </div>
+  </td>
+  <td class="py-1">
+    <div class="text-secondary small">
+      {{ tx.created_date.split(' ')[0] }}
+    </div>
+  </td>
 </tr>
 {% endfor %}

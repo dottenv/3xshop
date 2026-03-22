@@ -3,15 +3,15 @@
     <div class="card-body">
       <div class="row align-items-center">
         <div class="col-auto">
-          <span class="bg-primary text-white avatar">
-            <i class="fas fa-users"></i>
+          <span class="bg-primary text-white avatar shadow-sm">
+            <i class="ti ti-users fs-2"></i>
           </span>
         </div>
         <div class="col">
-          <div class="font-weight-medium">
+          <div class="font-weight-bold h2 mb-0">
             {{ stats.user_count }}
           </div>
-          <div class="text-secondary small">
+          <div class="text-secondary small lh-1 mt-1">
             Пользователей
           </div>
         </div>
@@ -24,15 +24,15 @@
     <div class="card-body">
       <div class="row align-items-center">
         <div class="col-auto">
-          <span class="bg-green text-white avatar">
-            <i class="fas fa-key"></i>
+          <span class="bg-green text-white avatar shadow-sm">
+            <i class="ti ti-key fs-2"></i>
           </span>
         </div>
         <div class="col">
-          <div class="font-weight-medium">
+          <div class="font-weight-bold h2 mb-0">
             {{ stats.total_keys }}
           </div>
-          <div class="text-secondary small">
+          <div class="text-secondary small lh-1 mt-1">
             Всего ключей
           </div>
         </div>
@@ -45,15 +45,15 @@
     <div class="card-body">
       <div class="row align-items-center">
         <div class="col-auto">
-          <span class="bg-yellow text-white avatar">
-            <i class="fas fa-wallet"></i>
+          <span class="bg-yellow text-white avatar shadow-sm">
+            <i class="ti ti-wallet fs-2"></i>
           </span>
         </div>
         <div class="col">
-          <div class="font-weight-medium">
-            {{ stats.total_spent | round(2) }} <small class="text-secondary">RUB</small>
+          <div class="font-weight-bold h2 mb-0">
+            {{ stats.total_spent | round(1) }} <small class="fs-6 fw-normal">₽</small>
           </div>
-          <div class="text-secondary small">
+          <div class="text-secondary small lh-1 mt-1">
             Всего потрачено
           </div>
         </div>
@@ -66,15 +66,15 @@
     <div class="card-body">
       <div class="row align-items-center">
         <div class="col-auto">
-          <span class="bg-blue text-white avatar">
-            <i class="fas fa-server"></i>
+          <span class="bg-azure text-white avatar shadow-sm">
+            <i class="ti ti-server fs-2"></i>
           </span>
         </div>
         <div class="col">
-          <div class="font-weight-medium">
+          <div class="font-weight-bold h2 mb-0">
             {{ stats.host_count }}
           </div>
-          <div class="text-secondary small">
+          <div class="text-secondary small lh-1 mt-1">
             Хосты • {{ open_tickets_count }} тикетов
           </div>
         </div>

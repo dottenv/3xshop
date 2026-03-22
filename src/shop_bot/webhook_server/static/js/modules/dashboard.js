@@ -2,90 +2,37 @@
 import { refreshContainerById } from './core.js';
 
 export function initializeDashboardCharts() {
-    const usersChartCanvas = document.getElementById('newUsersChart');
-    if (!usersChartCanvas || typeof CHART_DATA === 'undefined') {
+    const combinedChartCanvas = document.getElementById('combinedStatsChart');
+    if (!combinedChartCanvas || typeof CHART_DATA === 'undefined') {
         return;
     }
 
-    const keysChartCanvas = document.getElementById('newKeysChart');
-    const ctxUsers = usersChartCanvas.getContext('2d');
-    const ctxKeys = keysChartCanvas ? keysChartCanvas.getContext('2d') : null;
+    const ctx = combinedChartCanvas.getContext('2d');
 
     // Prepare data
     const labels = CHART_DATA.dates || [];
     const usersData = CHART_DATA.users || [];
     const keysData = CHART_DATA.keys || [];
 
-    // Common chart options
-    const commonOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                mode: 'index',
-                intersect: false,
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#fff',
-                bodyColor: '#fff',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                borderWidth: 1
-            }
-        },
-        scales: {
-            x: {
-                grid: {
-                    display: false
-                },
-                ticks: {
-                    maxRotation: 45,
-                    minRotation: 45
-                }
-            },
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
-                }
-            }
-        },
-        interaction: {
-            mode: 'nearest',
-            axis: 'x',
-            intersect: false
-        }
-    };
-
-    // Create users chart
+    // Create combined chart
     if (window.Chart) {
-        new Chart(ctxUsers, {
+        new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Новые пользователи',
-                    data: usersData,
-                    borderColor: '#206bc4',
-                    backgroundColor: 'rgba(32, 107, 196, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 3,
-                    pointHoverRadius: 5
-                }]
-            },
-            options: commonOptions
-        });
-
-        // Create keys chart if canvas exists
-        if (ctxKeys) {
-            new Chart(ctxKeys, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
+                datasets: [
+                    {
+                        label: 'Новые пользователи',
+                        data: usersData,
+                        borderColor: '#206bc4',
+                        backgroundColor: 'rgba(32, 107, 196, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    },
+                    {
                         label: 'Новые ключи',
                         data: keysData,
                         borderColor: '#2fb344',
@@ -93,13 +40,52 @@ export function initializeDashboardCharts() {
                         borderWidth: 2,
                         fill: true,
                         tension: 0.3,
-                        pointRadius: 3,
+                        pointRadius: 2,
                         pointHoverRadius: 5
-                    }]
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1
+                    }
                 },
-                options: commonOptions
-            });
-        }
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxRotation: 0,
+                            maxTicksLimit: 10
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
     }
 
     // Auto-refresh charts every 10 seconds
