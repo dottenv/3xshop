@@ -1,23 +1,23 @@
 {% extends 'Default/base.html' %} {% block title %}Управление Пользователями{% endblock %} {% block content %}
 
-<div class="page-header d-print-none">
-  <div class="row align-items-center g-2">
-    <div class="col">
-      <!-- Хлебные крошки -->
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="{{ url_for('dashboard_page') }}">Главная</a></li>
-          <li class="breadcrumb-item active" aria-current="page">Пользователи</li>
-        </ol>
-      </nav>
-      <h2 class="page-title">Пользователи</h2>
-      <div class="text-secondary small mt-1 d-none d-sm-block">Список зарегистрированных пользователей и быстрые действия</div>
-    </div>
-    
-    <!-- Фильтры и поиск -->
-    <div class="col-auto ms-auto">
-      <div class="page-header-controls">
-        <div class="input-group input-group-flat w-auto">
+    <div class="page-header d-print-none">
+      <div class="row align-items-center g-2">
+        <div class="col">
+          <!-- Хлебные крошки -->
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="{{ url_for('dashboard_page') }}">Главная</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Пользователи</li>
+            </ol>
+          </nav>
+          <h2 class="page-title">Пользователи</h2>
+          <div class="text-secondary small mt-1 d-none d-sm-block">Список зарегистрированных пользователей и быстрые действия</div>
+        </div>
+        
+        <!-- Фильтры и поиск -->
+        <div class="col-auto ms-auto">
+          <div class="page-header-controls">
+            <div class="input-group input-group-flat w-auto">
               <input id="users-search" type="text" class="form-control" placeholder="Поиск..." value="{{ q or '' }}">
               <span class="input-group-text">
                 <kbd class="bg-light text-dark">Ctrl+K</kbd>
@@ -33,6 +33,85 @@
         </div>
       </div>
     </div>
+  
+  <!-- Modal: Баланс пользователя -->
+<div class="modal modal-blur fade" id="balanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Баланс пользователя</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2 text-secondary" id="bm-user"></div>
+        <div class="mb-2">Текущий баланс: <strong id="bm-balance">0.00</strong> RUB</div>
+        <form id="bm-form" class="d-flex gap-2" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input class="form-control" type="text" inputmode="decimal" name="delta" placeholder="± сумма" required />
+          <button class="btn btn-primary" type="submit">Изменить</button>
+        </form>
+        <hr/>
+        <div class="mb-1">Рефералы: <strong id="bm-refcount">0</strong></div>
+        <div class="small text-secondary" style="max-height:180px;overflow:auto;">
+          <ul class="list-unstyled mb-0" id="bm-reflist"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table id="users-table" class="table table-vcenter card-table table-nowrap">
+        <thead>
+          <tr>
+            <th>Пользователь</th>
+            <th>Статус</th>
+            <th>Ключи</th>
+            <th>Баланс</th>
+            <th class="w-1"></th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody"
+               data-fetch-url="{{ url_for('users_table_partial', page=current_page or 1, per_page=per_page or 20, q=q or '') }}"
+               data-fetch-interval="10000"
+               data-current-page="{{ current_page or 1 }}"
+               data-per-page="{{ per_page or 20 }}"
+               data-q="{{ q or '' }}">
+          {% for user in users %}
+          <tr>
+            <td>
+              <div class="d-flex py-1 align-items-center">
+                <div class="flex-fill">
+                  <div class="font-weight-medium">@{{ user.username or 'N/A' }}</div>
+                  <div class="text-muted small"><a href="#" class="text-reset">{{ user.telegram_id }}</a></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if user.is_banned %}
+                <span class="badge bg-red-lt">Забанен</span>
+              {% else %}
+                <span class="badge bg-green-lt">Активен</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="text-muted small">
+                {% if user.keys_count and user.keys_count > 0 %}
+                  <span class="badge bg-azure-lt">{{ user.keys_count }} шт.</span>
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="fw-bold">{{ '%.2f'|format(user.balance or 0) }} ₽</div>
+            </td>
+            <td class="text-end">
+              <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Действия
                 </button>
                 <div class="dropdown-menu dropdown-menu-end">
                   <a class="dropdown-item" href="{{ url_for('admin_keys_page') }}?user_id={{ user.telegram_id }}">
@@ -253,169 +332,87 @@
       const url = buildPartialUrl(page, perPage, q);
       tbody.setAttribute('data-fetch-url', url);
     }
-    function updateAddressBar(page, perPage, q){
-      try{
-        const u = new URL(window.location.href);
-        u.searchParams.set('page', String(page||1));
-        u.searchParams.set('per_page', String(perPage||20));
-        if (q) u.searchParams.set('q', q); else u.searchParams.delete('q');
-        history.replaceState(null, '', u.toString());
-      }catch(_){ }
-    }
-    function refreshUsers(){ try { return window.refreshContainerById('users-tbody'); } catch(_){ return Promise.resolve(); } }
-    let tDeb = null;
-    function onSearchChanged(){
-      clearTimeout(tDeb);
-      tDeb = setTimeout(async () => {
-        const q = input.value.trim();
-        const perPage = Number(perPageSel?.value || tbody?.getAttribute('data-per-page') || 20);
-        const page = 1;
-        syncTbodyUrl(page, perPage, q);
-        updateAddressBar(page, perPage, q);
-        await refreshUsers();
-      }, 250);
-    }
-    input.addEventListener('input', onSearchChanged);
-    input.addEventListener('search', onSearchChanged);
-    if (perPageSel){
-      perPageSel.addEventListener('change', async () => {
-        const q = input.value.trim();
-        const perPage = Number(perPageSel.value || 20);
-        const page = 1;
-        syncTbodyUrl(page, perPage, q);
-        updateAddressBar(page, perPage, q);
-        await refreshUsers();
-      });
-    }
-    // Пагинация: делегирование кликов по .pagination
-    document.addEventListener('click', async (e) => {
-      const a = e.target.closest('.pagination a.page-link');
-      if (!a) return;
-      e.preventDefault();
-      const page = Number(a.getAttribute('data-page')||'1');
-      if (!page || page < 1) return;
-      const q = input.value.trim();
-      const perPage = Number(perPageSel?.value || 20);
-      syncTbodyUrl(page, perPage, q);
-      updateAddressBar(page, perPage, q);
-      await refreshUsers();
-      // визуально подсветим активную страницу без перезагрузки
-      document.querySelectorAll('.pagination li').forEach(li => li.classList.remove('active'));
-      const li = a.closest('li'); if (li) li.classList.add('active');
-    });
-    // При автообновлении tbody — снова применяем фильтр
-    (function(){
-      if (!tbody) return;
-      let t = null;
-      const obs = new MutationObserver(() => {
-        clearTimeout(t);
-        t = setTimeout(() => { restoreOpenedKeys(); }, 50);
-      });
-      obs.observe(tbody, { childList: true, subtree: true });
-    })();
-    // Тоггл строки с ключами
-    table.addEventListener('click', function(e){
-      const btn = e.target.closest('[data-toggle="keys"]');
-      if (!btn) return;
-      const uid = btn.getAttribute('data-user');
-      const row = document.getElementById('keys-' + uid);
-      if (!row) return;
-      const isHidden = window.getComputedStyle(row).display === 'none';
-      if (isHidden){
-        openKeysForUid(uid);
-      } else {
-        closeKeysForUid(uid);
+
+    tbody.addEventListener('click', e => {
+      const btnKey = e.target.closest('[data-toggle="keys"]');
+      if (btnKey) {
+        const uid = btnKey.getAttribute('data-user');
+        const row = getKeysRowByUid(uid);
+        if (row && row.style.display === 'none') openKeysForUid(uid);
+        else closeKeysForUid(uid);
+        return;
+      }
+      const btnBal = e.target.closest('.btn-user-balance-sign');
+      if (btnBal) {
+        const uid = btnBal.getAttribute('data-uid');
+        const name = btnBal.getAttribute('data-username');
+        const bal = btnBal.getAttribute('data-balance');
+        const refs = JSON.parse(btnBal.getAttribute('data-referrals') || '[]');
+        const sign = btnBal.getAttribute('data-sign');
+        
+        document.getElementById('bm-user').textContent = `@${name} (${uid})`;
+        document.getElementById('bm-balance').textContent = bal;
+        document.getElementById('bm-refcount').textContent = refs.length;
+        const list = document.getElementById('bm-reflist');
+        list.innerHTML = refs.length ? refs.map(r => `<li>${r.telegram_id} (${r.username || 'N/A'})</li>`).join('') : '<li>Нет рефералов</li>';
+        
+        const form = document.getElementById('bm-form');
+        form.action = `/admin/users/${uid}/balance?sign=${sign === '+' ? 'plus' : 'minus'}`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('balanceModal'));
+        modal.show();
       }
     });
 
-    // Открытие модалки баланса с предустановленным знаком (+/-)
-    table.addEventListener('click', function(e){
-      const btn = e.target.closest('.btn-user-balance-sign');
-      if (!btn) return;
-      const uid = btn.getAttribute('data-uid');
-      const uname = btn.getAttribute('data-username') || 'N/A';
-      const balance = btn.getAttribute('data-balance') || '0.00';
-      const sign = btn.getAttribute('data-sign') || '';
-      let refs = [];
-      try { refs = JSON.parse(btn.getAttribute('data-referrals') || '[]'); } catch(_){ refs = []; }
-
-      const modalEl = document.getElementById('balanceModal');
-      const bmUser = modalEl.querySelector('#bm-user');
-      const bmBal = modalEl.querySelector('#bm-balance');
-      const bmForm = modalEl.querySelector('#bm-form');
-      const bmCount = modalEl.querySelector('#bm-refcount');
-      const bmList = modalEl.querySelector('#bm-reflist');
-      const deltaInput = bmForm.querySelector('input[name="delta"]');
-
-      bmUser.textContent = `@${uname} (#${uid})`;
-      bmBal.textContent = balance;
-      bmForm.action = `{{ url_for('adjust_balance_route', user_id=0) }}`.replace('/0/', `/${uid}/`);
-      bmCount.textContent = refs.length;
-      bmList.innerHTML = refs.map(r => `<li>#${r.telegram_id} — @${(r.username||'N/A')} · ${r.registration_date}</li>`).join('');
-
-      // Проставляем знак и ставим курсор в конец
-      try {
-        deltaInput.value = sign;
-        deltaInput.focus();
-        const len = deltaInput.value.length;
-        deltaInput.setSelectionRange(len, len);
-      } catch(_){ }
-
-      const modal = new bootstrap.Modal(modalEl);
-      modal.show();
+    tbody.addEventListener('htmx:afterSwap', () => {
+      restoreOpenedKeys();
     });
 
-    // AJAX-сабмит формы изменения баланса (показываем тост, не перезагружаем страницу)
-    (function(){
-      const modalEl = document.getElementById('balanceModal');
-      if (!modalEl) return;
-      const form = modalEl.querySelector('#bm-form');
-      if (!form) return;
-      form.addEventListener('submit', async function(ev){
-        ev.preventDefault();
-        try{
-          const fd = new FormData(form);
-          // гарантируем csrf
-          if (!fd.get('csrf_token')){
-            const meta = document.querySelector('meta[name="csrf-token"]');
-            const token = meta ? meta.getAttribute('content') : '';
-            if (token) fd.append('csrf_token', token);
-          }
-          const resp = await fetch(form.action, {
-            method: 'POST',
-            body: fd,
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            credentials: 'same-origin'
-          });
-          const data = await resp.json().catch(()=>null);
-          if (resp.ok && data && data.ok){
-            try { window.showToast('success', data.message || 'Баланс изменён.'); } catch(_){ }
-            try { bootstrap.Modal.getInstance(modalEl)?.hide(); } catch(_){ }
-            try { await window.refreshContainerById('users-tbody'); } catch(_){ }
-          } else {
-            const msg = (data && data.message) || (data && data.error) || 'Не удалось изменить баланс';
-            try { window.showToast('danger', msg); } catch(_){ }
-          }
-        } catch(_){
-          try { window.showToast('danger', 'Ошибка сети'); } catch(__){}
+    let searchTimeout;
+    input.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const q = input.value.trim();
+        const pp = perPageSel.value;
+        syncTbodyUrl(1, pp, q);
+        // Вызываем htmx.ajax для обновления таблицы
+        if (window.htmx) {
+          htmx.ajax('GET', buildPartialUrl(1, pp, q), { target: '#users-tbody', swap: 'innerHTML' });
         }
-      });
-    })();
+      }, 400);
+    });
+
+    perPageSel.addEventListener('change', () => {
+      const q = input.value.trim();
+      const pp = perPageSel.value;
+      syncTbodyUrl(1, pp, q);
+      if (window.htmx) {
+        htmx.ajax('GET', buildPartialUrl(1, pp, q), { target: '#users-tbody', swap: 'innerHTML' });
+      }
+    });
+
+    document.addEventListener('click', e => {
+      const pgLink = e.target.closest('.pagination .page-link');
+      if (pgLink) {
+        e.preventDefault();
+        const page = pgLink.getAttribute('data-page');
+        if (!page) return;
+        const q = input.value.trim();
+        const pp = perPageSel.value;
+        syncTbodyUrl(page, pp, q);
+        if (window.htmx) {
+          htmx.ajax('GET', buildPartialUrl(page, pp, q), { target: '#users-tbody', swap: 'innerHTML' });
+        }
+      }
+    });
+    
+    // Global shortcut Ctrl+K to search
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        input.focus();
+      }
+    });
   })();
   </script>
-
-  <script>
-  // Отключаем стандартный soft-auto-update для users-tbody, чтобы он не сбрасывал поиск.
-  (function(){
-    const tbody = document.getElementById('users-tbody');
-    if (!tbody) return;
-    try { tbody.dispatchEvent(new Event('soft-update-stop')); } catch(_){ }
-    // Свой авто-таймер, который использует актуальный data-fetch-url
-    let timer = null;
-    function tick(){ try { window.refreshContainerById('users-tbody'); } catch(_){ } }
-    timer = setInterval(tick, 10000);
-    window.addEventListener('beforeunload', () => { if (timer) { clearInterval(timer); timer=null; } });
-  })();
-  </script>
-
 {% endblock %}
