@@ -38,6 +38,12 @@
       <li class="nav-item"><a class="nav-link" href="#trial">Триал</a></li>
       <li class="nav-item"><a class="nav-link" href="#monitoring">Мониторинг</a></li>
       <li class="nav-item"><a class="nav-link" href="#content">Контент</a></li>
+      <li class="nav-item ms-auto">
+        <form action="{{ url_for('logout_page') }}" method="post" id="logout-form-settings" style="display: none;"></form>
+        <a class="nav-link text-danger" href="#" onclick="event.preventDefault(); document.getElementById('logout-form-settings').submit();">
+          <i class="ti ti-logout me-1"></i> Выход
+        </a>
+      </li>
     </ul>
   </div>
   </div>
