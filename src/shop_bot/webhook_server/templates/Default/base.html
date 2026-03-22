@@ -98,17 +98,17 @@
 			</nav>
 			
 			<div class="sidebar-footer">
-				<div class="bot-status-card">
-					<div class="bot-status-info">
-						<span class="bot-status-label">Бот</span>
+				<div class="bot-control-block">
+					<div class="bot-info">
+						<span class="label">Бот</span>
 						{% if bot_status.is_running %}
-						<div class="status-indicator is-running">
-							<span class="status-dot"></span>
+						<div class="status is-running">
+							<span class="dot"></span>
 							<span>Запущен</span>
 						</div>
 						{% else %}
-						<div class="status-indicator is-stopped">
-							<span class="status-dot"></span>
+						<div class="status is-stopped">
+							<span class="dot"></span>
 							<span>Остановлен</span>
 						</div>
 						{% endif %}
@@ -116,39 +116,40 @@
 					
 					{% if bot_status.is_running %}
 					<form action="{{ url_for('stop_both_bots_route') }}" method="post">
-						<button type="submit" class="btn btn-outline-danger btn-sm">
-							<i class="ti ti-player-stop"></i> Остановить
+						<button type="submit" class="bot-action-btn stop" title="Остановить">
+							<i class="ti ti-player-stop"></i>
 						</button>
 					</form>
 					{% else %}
 						{% if all_settings_ok and support_settings_ok %}
 						<form action="{{ url_for('start_both_bots_route') }}" method="post">
-							<button type="submit" class="btn btn-success btn-sm">
-								<i class="ti ti-player-play"></i> Запустить
+							<button type="submit" class="bot-action-btn start" title="Запустить">
+								<i class="ti ti-player-play"></i>
 							</button>
 						</form>
 						{% else %}
-						<button class="btn btn-secondary btn-sm" disabled title="Заполните настройки">
-							<i class="ti ti-player-play"></i> Запустить
+						<button class="bot-action-btn" disabled style="background: var(--border-color); color: var(--text-muted);" title="Заполните настройки">
+							<i class="ti ti-player-play"></i>
 						</button>
 						{% endif %}
 					{% endif %}
 				</div>
 				
-				<div class="sidebar-controls">
-					<label class="theme-switch-wrapper" for="theme-toggle-checkbox">
+				<div class="footer-controls">
+					<button type="button" class="theme-toggle-btn" id="theme-toggle">
 						<i class="ti ti-moon"></i>
-						<div class="theme-switch">
-							<input type="checkbox" id="theme-toggle-checkbox">
-							<span class="theme-slider"></span>
-						</div>
-					</label>
+						<span>Тема</span>
+					</button>
 					
-					<form action="{{ url_for('logout_page') }}" method="post" id="logout-form" style="display: none;"></form>
-					<a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="logout-link d-lg-none" title="Выйти">
-						<i class="ti ti-logout"></i>
-						<span>Выход</span>
-					</a>
+					<div class="footer-icons">
+						<a href="{{ url_for('settings_page') }}" class="footer-icon-link" title="Настройки">
+							<i class="ti ti-settings"></i>
+						</a>
+						<form action="{{ url_for('logout_page') }}" method="post" id="logout-form" style="display: none;"></form>
+						<a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="footer-icon-link logout" title="Выйти">
+							<i class="ti ti-logout"></i>
+						</a>
+					</div>
 				</div>
 			</div>
 		</aside>

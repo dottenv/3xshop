@@ -19,27 +19,27 @@ export function initTooltipsWithin(root) {
 export function initializeThemeToggle() {
     const THEME_KEY = 'ui_theme';
     const root = document.documentElement; // <html>
-    const checkbox = document.getElementById('theme-toggle-checkbox');
-    const wrapper = document.querySelector('.theme-switch-wrapper');
-    if (!checkbox || !wrapper) return;
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
     
     // Load saved theme
     const saved = localStorage.getItem(THEME_KEY) || 'dark';
     root.setAttribute('data-bs-theme', saved);
-    checkbox.checked = saved === 'dark';
-    updateIcon(saved);
+    updateUI(saved);
     
-    checkbox.addEventListener('change', () => {
-        const next = checkbox.checked ? 'dark' : 'light';
+    btn.addEventListener('click', () => {
+        const current = root.getAttribute('data-bs-theme') || 'light';
+        const next = current === 'light' ? 'dark' : 'light';
         root.setAttribute('data-bs-theme', next);
         localStorage.setItem(THEME_KEY, next);
-        updateIcon(next);
+        updateUI(next);
     });
     
-    function updateIcon(theme) {
-        const icon = wrapper.querySelector('i');
-        if (!icon) return;
-        icon.className = theme === 'dark' ? 'ti ti-moon' : 'ti ti-sun';
+    function updateUI(theme) {
+        const icon = btn.querySelector('i');
+        const span = btn.querySelector('span');
+        if (icon) icon.className = theme === 'dark' ? 'ti ti-moon' : 'ti ti-sun';
+        // if (span) span.textContent = theme === 'dark' ? 'Темная' : 'Светлая';
     }
 }
 
