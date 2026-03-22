@@ -6,14 +6,14 @@
         <div class="font-weight-medium text-truncate" style="max-width: 120px;" title="{{ tx.username or 'N/A' }}">
           {{ tx.username or 'N/A' }}
         </div>
-        <div class="text-secondary small text-truncate" style="max-width: 120px;">
+        <div class="text-muted small text-truncate" style="max-width: 120px;">
           {{ tx.user_id }}
         </div>
       </div>
     </div>
   </td>
-  <td class="py-1">
-    <span class="badge badge-outline text-secondary fw-normal">
+  <td class="py-1 text-center">
+    <span class="badge bg-blue-lt fw-medium">
       {{ tx.plan_name }}
     </span>
   </td>
@@ -23,7 +23,7 @@
     </div>
   </td>
   <td class="py-1">
-    <div class="text-secondary small">
+    <div class="text-muted small">
       {{ tx.created_date.split(' ')[0] }}
     </div>
   </td>
