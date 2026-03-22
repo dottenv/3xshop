@@ -5,7 +5,7 @@ body.layout-sidebar {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: var(--bg-app);
+  background: var(--bg-page);
   color: var(--text-primary);
 }
 
@@ -139,6 +139,7 @@ body.layout-sidebar {
   background: var(--bg-page);
   border: 1px solid var(--border-color);
   border-radius: 12px;
+  background-color: #bababa;
 }
 
 .bot-info {
@@ -619,16 +620,16 @@ body.layout-sidebar {
 
 /* Светлая тема */
 [data-bs-theme='light'] {
-	--bg-page: #f1f3f6; /* Светло-серый фон страницы */
+	--bg-page: #e9ecef; /* Заметно темнее для контраста с карточками */
 	--bg-surface: #ffffff; /* Белый сайдбар */
-	--bg-card: #ffffff; /* Белые карточки */
+	--bg-card: #ffffff; /* Чисто белые карточки */
 	--text-primary: #1d273b;
 	--text-muted: #627282;
-	--border-color: #dee2e6; /* Более четкая граница для светлой темы */
+	--border-color: #d1d9e6; /* Более выраженная граница */
 	--tblr-primary: var(--primary-color);
 	--bs-primary: var(--primary-color);
-    --accent-1: color-mix(in oklab, var(--primary-color) 8%, white);
-    --accent-2: color-mix(in oklab, #3e8cc9 6%, white);
+    --accent-1: color-mix(in oklab, var(--primary-color) 6%, white);
+    --accent-2: color-mix(in oklab, #3e8cc9 5%, white);
     --accent-3: color-mix(in oklab, #3ec996 4%, white);
 }
 
