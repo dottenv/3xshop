@@ -1,21 +1,25 @@
 {% extends "Default/base.html" %} {% block title %}Главная страница{% endblock %} {% block content %}
 
 <div class="page-header d-print-none">
-  <div class="row align-items-center g-2">
-    <div class="col">
-      <div class="page-pretitle">Обзор</div>
-      <h2 class="page-title">Панель управления</h2>
+  <div class="container-xl">
+    <div class="row align-items-center g-2">
+      <div class="col">
+        <div class="page-pretitle">Обзор</div>
+        <h2 class="page-title">Панель управления</h2>
+      </div>
     </div>
   </div>
 </div>
 
-<div id="dash-stats" class="row row-deck row-cards"
-     data-fetch-url="{{ url_for('dashboard_stats_partial') }}"
-     data-fetch-interval="8000">
-  {% include 'Default/partials/dashboard_stats.html' %}
-</div>
+<div class="page-body">
+  <div class="container-xl">
+    <div id="dash-stats" class="row row-deck row-cards"
+         data-fetch-url="{{ url_for('dashboard_stats_partial') }}"
+         data-fetch-interval="8000">
+      {% include 'Default/partials/dashboard_stats.html' %}
+    </div>
 
-<div class="row row-cards">
+    <div class="row row-cards mt-1">
   <div class="col-lg-8">
     <!-- Speedtests compact block (left column, compact) -->
     <div class="card card-compact glass mb-3">
@@ -127,7 +131,9 @@
       {% endif %}
     </div>
 
+    </div>
   </div>
+</div>
 </div>
 
 <!-- Modal: подробный график спидтеста -->
