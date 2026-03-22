@@ -1,18 +1,18 @@
 {% extends "Default/base.html" %} {% block title %}Главная страница{% endblock %} {% block content %}
 
 <div class="page-header d-print-none">
-  <div class="row align-items-center">
+  <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title">Главная</h2>
-      <div class="text-secondary">Сводка и ключевые метрики</div>
+      <div class="page-pretitle">Обзор</div>
+      <h2 class="page-title">Панель управления</h2>
     </div>
   </div>
-  <div id="dash-stats" class="row row-deck row-cards mt-2"
-       data-fetch-url="{{ url_for('dashboard_stats_partial') }}"
-       data-fetch-interval="8000">
-    {% include 'Default/partials/dashboard_stats.html' %}
-  </div>
-  
+</div>
+
+<div id="dash-stats" class="row row-deck row-cards"
+     data-fetch-url="{{ url_for('dashboard_stats_partial') }}"
+     data-fetch-interval="8000">
+  {% include 'Default/partials/dashboard_stats.html' %}
 </div>
 
 <div class="row row-cards">

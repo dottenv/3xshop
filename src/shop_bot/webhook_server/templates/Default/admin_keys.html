@@ -1,10 +1,16 @@
 {% extends "Default/base.html" %} {% block title %}Админ — Ключи{% endblock %}
 {% block content %}
 <div class="page-header d-print-none">
-  <div class="row align-items-center">
+  <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title">Ключи</h2>
-      <div class="text-secondary">Просмотр, создание, удаление и редактирование комментариев</div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard_page') }}">Главная</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Ключи</li>
+        </ol>
+      </nav>
+      <h2 class="page-title">Управление ключами</h2>
+      <div class="text-secondary small mt-1 d-none d-sm-block">Просмотр, создание и администрирование ключей доступа</div>
     </div>
   </div>
 </div>

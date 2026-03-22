@@ -3,23 +3,22 @@
 <div class="page-header d-print-none">
   <div class="row align-items-center g-2">
     <div class="col">
+      <!-- Хлебные крошки -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard_page') }}">Главная</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Пользователи</li>
+        </ol>
+      </nav>
       <h2 class="page-title">Пользователи</h2>
-      <div class="text-secondary">Список зарегистрированных пользователей и быстрые действия</div>
+      <div class="text-secondary small mt-1 d-none d-sm-block">Список зарегистрированных пользователей и быстрые действия</div>
     </div>
-    <div class="col-auto ms-auto d-print-none">
-      <div class="d-flex gap-2">
-        <input id="users-search" type="text" class="form-control" placeholder="Поиск по ID или Username..." value="{{ q or '' }}" />
-        <select id="users-per-page" class="form-select" title="На странице">
-          {% set _pp = per_page or 20 %}
-          <option value="10" {% if _pp == 10 %}selected{% endif %}>10</option>
-          <option value="20" {% if _pp == 20 %}selected{% endif %}>20</option>
-          <option value="50" {% if _pp == 50 %}selected{% endif %}>50</option>
-          <option value="100" {% if _pp == 100 %}selected{% endif %}>100</option>
-        </select>
-      </div>
-    </div>
-  </div>
-</div>
+    
+    <!-- Фильтры и поиск -->
+    <div class="col-auto ms-auto">
+      <div class="page-header-controls">
+        <div class="input-group input-group-flat w-auto">
+          <input id="users-search" type="text" class="form-control" placeholder="Поиск..." value="{{ q or '' }}\
 
 <!-- Modal: Баланс пользователя -->
 <div class="modal modal-blur fade" id="balanceModal" tabindex="-1" aria-hidden="true">

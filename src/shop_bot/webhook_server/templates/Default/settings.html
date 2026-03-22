@@ -2,13 +2,18 @@
 {% block content %}
 
 <div class="page-header d-print-none">
-  <div class="row align-items-center">
+  <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title">Настройки</h2>
-      <div class="text-secondary">Панель, боты, платежи, хосты и контент</div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard_page') }}">Главная</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Настройки</li>
+        </ol>
+      </nav>
+      <h2 class="page-title">Настройки системы</h2>
+      <div class="text-secondary small mt-1 d-none d-sm-block">Конфигурация ботов, платежных систем и серверов</div>
     </div>
   </div>
-  <div class="hr-text"></div>
 </div>
 
 {# Индикатор готовности к запуску #}
