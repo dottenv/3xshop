@@ -139,7 +139,6 @@ body.layout-sidebar {
   background: var(--bg-page);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  background-color: #bababa;
 }
 
 .bot-info {
