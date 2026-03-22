@@ -171,9 +171,10 @@ export function initializeAdminKeysPage() {
 
         function place() {
             const r = userInput.getBoundingClientRect();
+            const parentRect = userInput.closest('#group_user').getBoundingClientRect();
             menu.style.position = 'fixed';
-            menu.style.left = `${Math.round(r.left + window.scrollX)}px`;
-            menu.style.top = `${Math.round(r.bottom + window.scrollY + 6)}px`;
+            menu.style.left = `${Math.round(r.left)}px`;
+            menu.style.top = `${Math.round(r.bottom + 2)}px`;
             menu.style.width = `${Math.round(r.width)}px`;
             menu.style.zIndex = '1065';
         }
