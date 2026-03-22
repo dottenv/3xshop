@@ -19,9 +19,6 @@
           <div class="page-header-controls">
             <div class="input-group input-group-flat w-auto">
               <input id="users-search" type="text" class="form-control" placeholder="Поиск..." value="{{ q or '' }}">
-              <span class="input-group-text">
-                <kbd class="bg-light text-dark">Ctrl+K</kbd>
-              </span>
             </div>
             <select id="users-per-page" class="form-select w-auto" title="На странице">
               <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
