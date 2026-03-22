@@ -19,160 +19,160 @@
 
 <div class="page-body">
   <div class="container-xl">
-    <div class="card glass mb-3">
-      <div class="card-header">
-        <h3 class="card-title">Создать новый ключ</h3>
-      </div>
-      <div class="card-body">
-        <form action="{{ url_for('create_key_standalone_ajax_route') }}" method="post" id="create-key-form" autocomplete="off">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <input type="hidden" name="key_type" id="key_type" value="personal" />
-          
-          <div class="row g-3">
-            <!-- Выбор типа ключа -->
-            <div class="col-12">
-              <div class="form-label">Тип ключа</div>
-              <div class="btn-group w-100" role="group">
-                <input type="radio" class="btn-check" name="btn-key-type" id="btn-type-personal" checked autocomplete="off">
-                <label class="btn btn-outline-primary" for="btn-type-personal">
-                  <i class="ti ti-user me-1"></i> Персональный
-                </label>
-                <input type="radio" class="btn-check" name="btn-key-type" id="btn-type-gift" autocomplete="off">
-                <label class="btn btn-outline-purple" for="btn-type-gift">
-                  <i class="ti ti-gift me-1"></i> Подарочный
-                </label>
+    <div class="row g-3">
+      <!-- Левая колонка: Форма создания (компактная) -->
+      <div class="col-lg-4">
+        <div class="card glass sticky-top" style="top: 1rem;">
+          <div class="card-header py-2">
+            <h3 class="card-title">Выдать ключ</h3>
+          </div>
+          <div class="card-body p-3">
+            <form action="{{ url_for('create_key_standalone_ajax_route') }}" method="post" id="create-key-form" autocomplete="off">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="key_type" id="key_type" value="personal" />
+              
+              <!-- Переключатель типов (компактные кнопки) -->
+              <div class="mb-3">
+                <div class="btn-group w-100" role="group">
+                  <input type="radio" class="btn-check" name="btn-key-type" id="btn-type-personal" checked>
+                  <label class="btn btn-outline-primary btn-sm" for="btn-type-personal">Личный</label>
+                  <input type="radio" class="btn-check" name="btn-key-type" id="btn-type-gift">
+                  <label class="btn btn-outline-purple btn-sm" for="btn-type-gift">Подарок</label>
+                </div>
               </div>
-            </div>
 
-            <!-- Данные пользователя и хоста -->
-            <div class="col-md-4" id="group_user">
-              <label class="form-label required" for="user_id">Пользователь</label>
-              <input class="form-control" id="user_id" name="user_id" placeholder="ID или @username" required />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label required" for="host_name">Хост</label>
-              <div class="soft-select" id="host_softselect" data-target="host_name">
-                <button type="button" class="soft-select-toggle" id="host_name_toggle">Выберите хост...</button>
-                <div class="soft-select-menu" id="host_name_menu"></div>
-                <select class="form-select select-soft" id="host_name" name="host_name" required>
-                  <option value="" selected disabled>Выберите хост...</option>
-                  {% for h in hosts %}
-                  <option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}">{{ h.host_name }}</option>
-                  {% endfor %}
-                </select>
+              <!-- Основные поля -->
+              <div class="mb-2" id="group_user">
+                <label class="form-label small mb-1">Пользователь</label>
+                <input class="form-control form-control-sm" id="user_id" name="user_id" placeholder="ID или @username" required />
               </div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label" for="key_email">Email ключа</label>
-              <div class="input-group input-group-flat">
-                <input class="form-control" type="email" id="key_email" name="key_email" placeholder="user@bot.local" required readonly />
-                <span class="input-group-text">
-                  <i class="ti ti-mail text-muted"></i>
-                </span>
-              </div>
-            </div>
 
-            <!-- Тариф и срок -->
-            <div class="col-md-4">
-              <label class="form-label required" for="plan_select">Тарифный план</label>
-              <div class="input-group">
-                <div class="soft-select flex-grow-1" id="plan_softselect" data-target="plan_select">
-                  <button type="button" class="soft-select-toggle" id="plan_select_toggle">— Не выбран —</button>
-                  <div class="soft-select-menu" id="plan_select_menu"></div>
-                  <select class="form-select select-soft" id="plan_select">
-                    <option value="">— Не выбран —</option>
+              <div class="mb-2">
+                <label class="form-label small mb-1">Сервер (Хост)</label>
+                <div class="soft-select select-sm" id="host_softselect" data-target="host_name">
+                  <button type="button" class="soft-select-toggle" id="host_name_toggle">Выбрать...</button>
+                  <div class="soft-select-menu" id="host_name_menu"></div>
+                  <select class="form-select d-none" id="host_name" name="host_name" required>
+                    <option value="" selected disabled>Выбрать...</option>
+                    {% for h in hosts %}
+                    <option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}">{{ h.host_name }}</option>
+                    {% endfor %}
                   </select>
                 </div>
-                <span class="input-group-text fw-bold text-purple" id="plan_price">0 ₽</span>
               </div>
-            </div>
-            <div class="col-md-8">
-              <label class="form-label" for="expiry_date">Срок действия</label>
-              <div class="d-flex gap-2 flex-wrap">
-                <div class="input-group input-group-flat w-auto flex-grow-1" style="min-width: 200px;">
-                  <input class="form-control expiry-input" type="text" id="expiry_date" name="expiry_date" placeholder="Выберите дату" />
-                  <span class="input-group-text">
-                    <i class="ti ti-calendar"></i>
-                  </span>
-                </div>
-                <div class="btn-group">
-                  <button class="btn btn-outline-secondary" type="button" data-preset="30">+30д</button>
-                  <button class="btn btn-outline-secondary" type="button" data-preset="90">+90д</button>
-                  <button class="btn btn-outline-secondary" type="button" data-preset="180">+180д</button>
-                  <button class="btn btn-outline-secondary" type="button" data-preset="365">+365д</button>
+
+              <div class="mb-2">
+                <label class="form-label small mb-1">Тариф</label>
+                <div class="input-group input-group-sm">
+                  <div class="soft-select flex-grow-1 select-sm" id="plan_softselect" data-target="plan_select">
+                    <button type="button" class="soft-select-toggle" id="plan_select_toggle">—</button>
+                    <div class="soft-select-menu" id="plan_select_menu"></div>
+                    <select class="form-select d-none" id="plan_select">
+                      <option value="">—</option>
+                    </select>
+                  </div>
+                  <span class="input-group-text fw-bold text-primary" id="plan_price">0 ₽</span>
                 </div>
               </div>
-            </div>
 
-            <!-- Дополнительно -->
-            <div class="col-md-12">
-              <label class="form-label" for="comment">Комментарий к ключу</label>
-              <input class="form-control" type="text" id="comment" name="comment" placeholder="Будет видно только администратору" />
-            </div>
+              <div class="mb-3">
+                <label class="form-label small mb-1">Срок действия</label>
+                <div class="input-group input-group-sm mb-2">
+                  <input class="form-control expiry-input" type="text" id="expiry_date" name="expiry_date" placeholder="ГГГГ-ММ-ДД" />
+                  <span class="input-group-text"><i class="ti ti-calendar"></i></span>
+                </div>
+                <div class="d-flex flex-wrap gap-1">
+                  <button class="btn btn-ghost-secondary btn-sm flex-fill py-1 px-0" type="button" data-preset="30">+30д</button>
+                  <button class="btn btn-ghost-secondary btn-sm flex-fill py-1 px-0" type="button" data-preset="90">+90д</button>
+                  <button class="btn btn-ghost-secondary btn-sm flex-fill py-1 px-0" type="button" data-preset="180">+180д</button>
+                  <button class="btn btn-ghost-secondary btn-sm flex-fill py-1 px-0" type="button" data-preset="365">+1г</button>
+                </div>
+              </div>
 
-            <div class="col-12 mt-4">
-              <button type="button" class="btn btn-primary w-100" id="btn-submit-create">
-                <i class="ti ti-key-plus me-2"></i> Создать и отправить ключ
+              <div class="mb-3">
+                <label class="form-label small mb-1">Email (авто)</label>
+                <input class="form-control form-control-sm bg-light" type="email" id="key_email" name="key_email" readonly />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small mb-1">Заметка</label>
+                <input class="form-control form-control-sm" type="text" id="comment" name="comment" placeholder="Видно только вам" />
+              </div>
+
+              <button type="button" class="btn btn-primary w-100 py-2" id="btn-submit-create">
+                <i class="ti ti-key-plus me-2"></i> Создать ключ
               </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Правая колонка: Список ключей -->
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Все ключи</h3>
+            <div id="expired-toolbar">
+              <form action="{{ url_for('sweep_expired_keys_route') }}" method="post" data-confirm="Удалить все истёкшие ключи?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                  <i class="ti ti-broom me-1"></i> Очистить истёкшие
+                </button>
+              </form>
             </div>
           </div>
-        </form>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-vcenter card-table table-nowrap">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Хост</th>
+                    <th>Email</th>
+                    <th>Истекает</th>
+                    <th class="w-1"></th>
+                  </tr>
+                </thead>
+                <tbody id="keys-tbody" data-fetch-url="{{ url_for('admin_keys_table_partial') }}" data-fetch-interval="10000">
+                  {% for k in keys %}
+                  <tr>
+                    <td><span class="text-muted">#{{ k.key_id }}</span></td>
+                    <td class="small">{{ k.user_id }}</td>
+                    <td><span class="badge bg-azure-lt">{{ k.host_name }}</span></td>
+                    <td class="small">{{ k.key_email }}</td>
+                    <td class="small">{{ k.expiry_date or '—' }}</td>
+                    <td class="text-end">
+                      <div class="dropdown">
+                        <button class="btn btn-sm btn-ghost-secondary btn-icon" data-bs-toggle="dropdown">
+                          <i class="ti ti-dots-vertical"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                          <button class="dropdown-item btn-open-expiry" data-key-id="{{ k.key_id }}">
+                            <i class="ti ti-calendar-plus me-2"></i> Продлить
+                          </button>
+                          <button class="dropdown-item btn-edit-comment" data-key-id="{{ k.key_id }}" data-current-comment="{{ k.comment or '' }}">
+                            <i class="ti ti-edit me-2"></i> Заметка
+                          </button>
+                          <div class="dropdown-divider"></div>
+                          <form action="{{ url_for('delete_key_route', key_id=k.key_id) }}" method="post" data-confirm="Удалить ключ #{{ k.key_id }}?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button type="submit" class="dropdown-item text-danger">
+                              <i class="ti ti-trash me-2"></i> Удалить
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-
-    <div class="card">
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-vcenter card-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>User</th>
-                <th>Хост</th>
-                <th>Email</th>
-                <th>UUID</th>
-                <th>Истекает</th>
-                <th>Создан</th>
-            <th class="w-1">Действия</th>
-          </tr>
-        </thead>
-        <tbody id="keys-tbody" data-fetch-url="{{ url_for('admin_keys_table_partial') }}" data-fetch-interval="10000">
-          {% for k in keys %}
-          <tr>
-            <td>#{{ k.key_id }}</td>
-            <td>{{ k.user_id }}</td>
-            <td>{{ k.host_name }}</td>
-            <td>{{ k.key_email }}</td>
-            <td class="text-truncate" style="max-width:180px">{{ k.xui_client_uuid }}</td>
-            <td>{{ k.expiry_date or '' }}</td>
-            <td>{{ k.created_date or '' }}</td>
-            <td>
-              <div class="btn-list">
-                <form action="{{ url_for('delete_key_route', key_id=k.key_id) }}" method="post" data-confirm="Удалить ключ #{{ k.key_id }}?">
-                  <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="8">
-              <form class="row g-2 align-items-center" action="{{ url_for('update_key_comment_route', key_id=k.key_id) }}" method="post">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <div class="col-12 col-md-10">
-                  <input class="form-control rounded-pill" type="text" name="comment" value="{{ k.comment or '' }}" placeholder="Комментарий" />
-                </div>
-                <div class="col-12 col-md-2">
-                  <button class="btn btn-outline-secondary rounded-pill w-100">Сохранить комментарий</button>
-                </div>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
 
 <!-- Toasts для статуса AJAX -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
