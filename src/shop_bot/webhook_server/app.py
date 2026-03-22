@@ -128,8 +128,16 @@ def create_webhook_app(bot_controller_instance):
             from shop_bot.data_manager.database import get_setting
             current_template = get_setting('panel_template') or 'Default'
             template_path = f"{current_template}/{template_name}"
+            
+            # Check if template exists
+            template_file = os.path.join(flask_app.template_folder, template_path)
+            if not os.path.exists(template_file):
+                logger.warning(f"Template {template_path} not found, falling back to Default")
+                template_path = f"Default/{template_name}"
+            
             return render_template(template_path, **context)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error rendering template {template_name}: {e}")
             # Fallback to default template if theme fails
             return render_template(f"Default/{template_name}", **context)
 
