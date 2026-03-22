@@ -1002,7 +1002,7 @@
     const headerEl = document.querySelector('#local-panel-header');
     if (headerEl) {
       headerEl.innerHTML = `
-        <i class="fas fa-desktop text-info me-2"></i>
+        <i class="ti ti-device-desktop text-info me-2"></i>
         Локальная панель
       `;
     }
@@ -1031,7 +1031,7 @@
         const statusEl = document.querySelector(`#host-status-${Array.from(document.querySelectorAll('button[data-host]')).indexOf(btn) + 1}`);
         
         if (el) {
-          el.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>';
+          el.innerHTML = '<div class="loading-spinner"><i class="ti ti-loader ti-spin"></i> Загрузка...</div>';
         }
         if (statusEl) {
           statusEl.className = 'status-indicator bg-warning';
@@ -1055,7 +1055,7 @@
         const statusEl = document.querySelector(`#target-status-${Array.from(document.querySelectorAll('button[data-target-name]')).indexOf(btn) + 1}`);
         
         if (el) {
-          el.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>';
+          el.innerHTML = '<div class="loading-spinner"><i class="ti ti-loader ti-spin"></i> Загрузка...</div>';
         }
         if (statusEl) {
           statusEl.className = 'status-indicator bg-warning';
