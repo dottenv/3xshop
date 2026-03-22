@@ -276,7 +276,7 @@ body.layout-sidebar {
 .main-content {
   margin-left: 280px;
   min-height: 100vh;
-  padding: 2rem;
+  padding: 1.25rem 0; /* Вертикальный отступ, горизонтальный через container-xl */
   transition: margin-left 0.3s ease;
 }
 
