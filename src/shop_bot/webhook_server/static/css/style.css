@@ -71,6 +71,7 @@ body.layout-sidebar {
   flex: 1;
   padding: 1rem 0;
   overflow-y: auto;
+  background-color: var(--bg-surface);
 }
 
 .nav-list {
@@ -135,7 +136,7 @@ body.layout-sidebar {
   align-items: center;
   justify-content: space-between;
   padding: 0.625rem 0.875rem;
-  background: color-mix(in oklab, var(--bg-surface) 95%, black);
+  background: var(--bg-page);
   border: 1px solid var(--border-color);
   border-radius: 12px;
 }
@@ -446,9 +447,9 @@ body.layout-sidebar {
 
 /* Компактный стиль карточки вверху */
 .card.card-compact .card-body { padding: 10px 12px; }
-.card.glass { background: color-mix(in oklab, var(--bg-card) 70%, transparent); border: 1px solid var(--border-color); border-radius: calc(var(--ui-radius) + 2px); box-shadow: none; }
+.card.glass { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: calc(var(--ui-radius) + 2px); box-shadow: none; }
 
-.card { box-shadow: none !important; }
+.card { box-shadow: none !important; background-color: var(--bg-card) !important; border: 1px solid var(--border-color) !important; }
 
 /* Мини-кнопки xs */
 .btn.btn-xs { padding: 4px 10px; font-size: .78rem; line-height: 1.2; border-radius: 10px; }
@@ -618,17 +619,17 @@ body.layout-sidebar {
 
 /* Светлая тема */
 [data-bs-theme='light'] {
-	--bg-page: #f1f3f6; /* Сероватый фон для акцентирования карточек */
-	--bg-surface: #ffffff;
-	--bg-card: #ffffff;
+	--bg-page: #f1f3f6; /* Светло-серый фон страницы */
+	--bg-surface: #ffffff; /* Белый сайдбар */
+	--bg-card: #ffffff; /* Белые карточки */
 	--text-primary: #1d273b;
 	--text-muted: #627282;
-	--border-color: rgba(0, 0, 0, 0.08);
+	--border-color: #dee2e6; /* Более четкая граница для светлой темы */
 	--tblr-primary: var(--primary-color);
 	--bs-primary: var(--primary-color);
-    --accent-1: color-mix(in oklab, var(--primary-color) 10%, transparent);
-    --accent-2: color-mix(in oklab, #3e8cc9 8%, transparent);
-    --accent-3: color-mix(in oklab, #3ec996 6%, transparent);
+    --accent-1: color-mix(in oklab, var(--primary-color) 8%, white);
+    --accent-2: color-mix(in oklab, #3e8cc9 6%, white);
+    --accent-3: color-mix(in oklab, #3ec996 4%, white);
 }
 
 /* Тёмная тема */
@@ -769,7 +770,7 @@ body::after {
 }
 
 body::after {
-  opacity: .32;
+  opacity: .12; /* Уменьшаем прозрачность эффекта, чтобы он не просвечивал сквозь блоки */
   animation: auroraMove 42s ease-in-out infinite;
   will-change: background, filter;
   filter: saturate(118%) brightness(106%);
