@@ -98,37 +98,57 @@
 			</nav>
 			
 			<div class="sidebar-footer">
-				<div class="bot-control">
+				<div class="bot-status-card">
+					<div class="bot-status-info">
+						<span class="bot-status-label">Бот</span>
+						{% if bot_status.is_running %}
+						<div class="status-indicator is-running">
+							<span class="status-dot"></span>
+							<span>Запущен</span>
+						</div>
+						{% else %}
+						<div class="status-indicator is-stopped">
+							<span class="status-dot"></span>
+							<span>Остановлен</span>
+						</div>
+						{% endif %}
+					</div>
+					
 					{% if bot_status.is_running %}
-					<p class="status-running"><span class="status-dot status-dot-animated bg-green"></span>Статус: <strong>Запущен</strong></p>
 					<form action="{{ url_for('stop_both_bots_route') }}" method="post">
-						<button type="submit" class="btn btn-danger btn-sm">
+						<button type="submit" class="btn btn-outline-danger btn-sm">
 							<i class="ti ti-player-stop"></i> Остановить
 						</button>
 					</form>
 					{% else %}
-					<p class="status-stopped"><span class="status-dot"></span>Статус: <strong>Остановлен</strong></p>
-					{% if all_settings_ok and support_settings_ok %}
-					<form action="{{ url_for('start_both_bots_route') }}" method="post">
-						<button type="submit" class="btn btn-success btn-sm">
+						{% if all_settings_ok and support_settings_ok %}
+						<form action="{{ url_for('start_both_bots_route') }}" method="post">
+							<button type="submit" class="btn btn-success btn-sm">
+								<i class="ti ti-player-play"></i> Запустить
+							</button>
+						</form>
+						{% else %}
+						<button class="btn btn-secondary btn-sm" disabled title="Заполните настройки">
 							<i class="ti ti-player-play"></i> Запустить
 						</button>
-					</form>
-					{% else %}
-					<button class="btn btn-secondary btn-sm" disabled>
-						<i class="ti ti-player-play"></i> Запустить
-					</button>
-					{% endif %} {% endif %}
+						{% endif %}
+					{% endif %}
 				</div>
 				
-				<div class="user-controls">
-					<span>Вы вошли в систему.</span>
-					<form action="{{ url_for('logout_page') }}" method="post" style="display: inline">
-						<button type="submit" class="btn btn-outline-secondary">Выйти</button>
-					</form>
-					<button type="button" id="theme-toggle" class="btn btn-outline-primary ms-2" title="Переключить тему">
-						<span class="theme-label">Тёмная</span>
-					</button>
+				<div class="sidebar-controls">
+					<label class="theme-switch-wrapper" for="theme-toggle-checkbox">
+						<i class="ti ti-moon"></i>
+						<div class="theme-switch">
+							<input type="checkbox" id="theme-toggle-checkbox">
+							<span class="theme-slider"></span>
+						</div>
+					</label>
+					
+					<form action="{{ url_for('logout_page') }}" method="post" id="logout-form" style="display: none;"></form>
+					<a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="logout-link" title="Выйти">
+						<i class="ti ti-logout"></i>
+						<span>Выход</span>
+					</a>
 				</div>
 			</div>
 		</aside>
