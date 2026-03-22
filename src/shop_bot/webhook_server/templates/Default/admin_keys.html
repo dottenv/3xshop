@@ -174,8 +174,6 @@
   </div>
 </div>
 
-<!-- удалён дублирующийся скрипт, логика перенесена ниже в общий IIFE -->
-
 <!-- Toasts для статуса AJAX -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
   <div id="toastOk" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -830,9 +828,6 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
 
-  </div>
-</div>
-{% endblock %}
 <script>
   (function(){
     const el = document.getElementById('expiry_date');
@@ -847,5 +842,7 @@
     }
   })();
 </script>
-<script id="users-data" type="application/json">{{ users | tojson }}</script>
+
+  </div>
+</div>
 {% endblock %}
