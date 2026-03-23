@@ -437,10 +437,23 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/support/table.partial')
     @login_required
     def support_table_partial():
-        status = request.args.get('status') or None
-        page = request.args.get('page', 1, type=int)
-        per_page = 12
-        tickets, total = get_tickets_paginated(page=page, per_page=per_page, status=status)
+        status_raw = (request.args.get('status') or '').strip().lower()
+        status = status_raw if status_raw in ('open', 'closed') else None
+        page = request.args.get('page', 1, type=int) or 1
+        per_page = request.args.get('per_page', 20, type=int) or 20
+        q = (request.args.get('q') or '').strip()
+        user_id = request.args.get('user_id', type=int)
+        ticket_id = request.args.get('ticket_id', type=int)
+        sort = (request.args.get('sort') or 'updated_desc').strip()
+        tickets, total = get_tickets_paginated(
+            page=max(1, page),
+            per_page=max(1, min(200, per_page)),
+            status=status,
+            q=q or None,
+            user_id=user_id,
+            ticket_id=ticket_id,
+            sort=sort
+        )
         return render_template_with_theme('partials/support_table.html', tickets=tickets)
 
     @flask_app.route('/support/open-count.partial')
@@ -1151,11 +1164,44 @@ def create_webhook_app(bot_controller_instance):
     @flask_app.route('/support')
     @login_required
     def support_list_page():
-        status = request.args.get('status')
-        page = request.args.get('page', 1, type=int)
-        per_page = 12
-        tickets, total = get_tickets_paginated(page=page, per_page=per_page, status=status if status in ['open', 'closed'] else None)
-        total_pages = ceil(total / per_page) if per_page else 1
+        status_raw = (request.args.get('status') or '').strip().lower()
+        if status_raw in ('open', 'closed'):
+            status = status_raw
+            filter_status = status_raw
+        elif status_raw == 'all':
+            status = None
+            filter_status = 'all'
+        else:
+            status = None
+            filter_status = None
+        page = request.args.get('page', 1, type=int) or 1
+        per_page = request.args.get('per_page', 20, type=int) or 20
+        per_page = max(10, min(200, per_page))
+        q = (request.args.get('q') or '').strip()
+        user_id = request.args.get('user_id', type=int)
+        ticket_id = request.args.get('ticket_id', type=int)
+        sort = (request.args.get('sort') or 'updated_desc').strip()
+        tickets, total = get_tickets_paginated(
+            page=max(1, page),
+            per_page=per_page,
+            status=status,
+            q=q or None,
+            user_id=user_id,
+            ticket_id=ticket_id,
+            sort=sort
+        )
+        total_pages = max(1, ceil(total / per_page)) if per_page else 1
+        page = min(max(1, page), total_pages)
+        if page != request.args.get('page', 1, type=int):
+            tickets, total = get_tickets_paginated(
+                page=page,
+                per_page=per_page,
+                status=status,
+                q=q or None,
+                user_id=user_id,
+                ticket_id=ticket_id,
+                sort=sort
+            )
         open_count = get_open_tickets_count()
         closed_count = get_closed_tickets_count()
         all_count = get_all_tickets_count()
@@ -1165,7 +1211,12 @@ def create_webhook_app(bot_controller_instance):
             tickets=tickets,
             current_page=page,
             total_pages=total_pages,
-            filter_status=status,
+            filter_status=filter_status,
+            q=q,
+            filter_user_id=user_id,
+            filter_ticket_id=ticket_id,
+            sort=sort,
+            per_page=per_page,
             open_count=open_count,
             closed_count=closed_count,
             all_count=all_count,

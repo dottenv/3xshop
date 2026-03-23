@@ -1,0 +1,294 @@
+{% extends 'Bootstrap/base.html' %}
+{% block title %}Поддержка{% endblock %}
+{% block content %}
+<div class="container-fluid h-100 d-flex flex-column">
+  <div class="row align-items-center g-2 mb-3">
+    <div class="col">
+      <h2 class="h4 mb-0">Поддержка</h2>
+      <div class="text-muted small">Список тикетов, фильтры и быстрые действия</div>
+    </div>
+    <div class="col-12 col-xl-auto">
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-sm {% if not filter_status or filter_status == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='all', q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc', per_page=per_page or 20) }}">Все ({{ all_count }})</a>
+        <a class="btn btn-sm {% if filter_status == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='open', q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc', per_page=per_page or 20) }}">Открытые ({{ open_count }})</a>
+        <a class="btn btn-sm {% if filter_status == 'closed' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='closed', q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc', per_page=per_page or 20) }}">Закрытые ({{ closed_count }})</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card flex-grow-1 d-flex flex-column" style="min-height: calc(100vh - 220px);">
+    <div class="card-body border-bottom">
+      <div class="row g-2">
+        <div class="col-12 col-lg-4">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input id="support-q" type="text" class="form-control" placeholder="Поиск по ID, пользователю или теме" value="{{ q or '' }}">
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <input id="support-user-id" type="number" min="1" class="form-control form-control-sm" placeholder="User ID" value="{{ filter_user_id if filter_user_id is not none else '' }}">
+        </div>
+        <div class="col-6 col-lg-2">
+          <input id="support-ticket-id" type="number" min="1" class="form-control form-control-sm" placeholder="Ticket ID" value="{{ filter_ticket_id if filter_ticket_id is not none else '' }}">
+        </div>
+        <div class="col-6 col-lg-2">
+          <select id="support-sort" class="form-select form-select-sm">
+            <option value="updated_desc" {% if (sort or 'updated_desc') == 'updated_desc' %}selected{% endif %}>Сначала новые</option>
+            <option value="updated_asc" {% if sort == 'updated_asc' %}selected{% endif %}>Сначала старые</option>
+            <option value="id_desc" {% if sort == 'id_desc' %}selected{% endif %}>ID по убыванию</option>
+            <option value="id_asc" {% if sort == 'id_asc' %}selected{% endif %}>ID по возрастанию</option>
+            <option value="status" {% if sort == 'status' %}selected{% endif %}>Сначала открытые</option>
+          </select>
+        </div>
+        <div class="col-6 col-lg-1">
+          <select id="support-per-page" class="form-select form-select-sm">
+            <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+            <option value="20" {% if per_page == 20 or not per_page %}selected{% endif %}>20</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+          </select>
+        </div>
+        <div class="col-12 col-lg-1 d-grid">
+          <button id="support-reset" class="btn btn-sm btn-outline-secondary" type="button">Сброс</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive flex-grow-1">
+      <table id="support-table" class="table table-hover align-middle mb-0">
+        <thead class="table-light position-sticky top-0">
+          <tr>
+            <th>Статус</th>
+            <th>ID</th>
+            <th>Пользователь</th>
+            <th>Тема</th>
+            <th class="text-nowrap">Обновлён</th>
+            <th class="text-end">Действия</th>
+          </tr>
+        </thead>
+        <tbody id="support-tbody"
+               data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page, per_page=per_page or 20, q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc') }}"
+               data-fetch-interval="10000">
+          {% include 'Bootstrap/partials/support_table.html' %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer">
+      <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <div class="small text-muted">Страница {{ current_page }} из {{ total_pages }}</div>
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if current_page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page-1, per_page=per_page or 20, q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc') }}">&laquo;</a>
+          </li>
+          {% set cp = current_page or 1 %}
+          {% set tp = total_pages or 1 %}
+          {% if cp > 2 %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=1, per_page=per_page or 20, q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc') }}">1</a></li>
+            {% if cp > 3 %}
+              <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endif %}
+          {% for p in range([1, cp-1]|max, [tp, cp+1]|min + 1) %}
+            <li class="page-item {% if p == cp %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=p, per_page=per_page or 20, q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc') }}">{{ p }}</a>
+            </li>
+          {% endfor %}
+          {% if cp < tp - 1 %}
+            {% if cp < tp - 2 %}
+              <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=tp, per_page=per_page or 20, q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc') }}">{{ tp }}</a></li>
+          {% endif %}
+          <li class="page-item {% if current_page >= total_pages %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page+1, per_page=per_page or 20, q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc') }}">&raquo;</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ticket-context-menu" class="dropdown-menu">
+  <button class="dropdown-item" type="button" data-action="open"><i class="bi bi-box-arrow-up-right me-2"></i>Открыть</button>
+  <button class="dropdown-item" type="button" data-action="toggle-status"><i class="bi bi-arrow-repeat me-2"></i>Сменить статус</button>
+  <div class="dropdown-divider"></div>
+  <button class="dropdown-item text-danger" type="button" data-action="delete"><i class="bi bi-trash me-2"></i>Удалить</button>
+</div>
+
+<script>
+  (function(){
+    const qInput = document.getElementById('support-q');
+    const userIdInput = document.getElementById('support-user-id');
+    const ticketIdInput = document.getElementById('support-ticket-id');
+    const sortSelect = document.getElementById('support-sort');
+    const perPageSelect = document.getElementById('support-per-page');
+    const resetBtn = document.getElementById('support-reset');
+    const table = document.getElementById('support-table');
+    const tbody = document.getElementById('support-tbody');
+    const menu = document.getElementById('ticket-context-menu');
+    if (!table || !tbody || !menu) return;
+
+    function updateQuery(next) {
+      const params = new URLSearchParams(window.location.search);
+      Object.keys(next).forEach((k) => {
+        const v = next[k];
+        if (v === null || v === undefined || v === '') params.delete(k);
+        else params.set(k, String(v));
+      });
+      window.location.search = params.toString();
+    }
+
+    const paramsOnLoad = new URLSearchParams(window.location.search);
+    const statusOnLoad = paramsOnLoad.get('status');
+    if (statusOnLoad === 'open') {
+      paramsOnLoad.set('status', 'closed');
+      paramsOnLoad.set('page', '1');
+      window.location.replace(window.location.pathname + '?' + paramsOnLoad.toString());
+      return;
+    }
+    if (!statusOnLoad) {
+      paramsOnLoad.set('status', 'closed');
+      paramsOnLoad.set('page', '1');
+      window.location.replace(window.location.pathname + '?' + paramsOnLoad.toString());
+      return;
+    }
+
+    let searchTimer;
+    if (qInput) {
+      qInput.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          updateQuery({
+            q: qInput.value.trim(),
+            user_id: userIdInput?.value || '',
+            ticket_id: ticketIdInput?.value || '',
+            sort: sortSelect?.value || 'updated_desc',
+            per_page: perPageSelect?.value || '20',
+            page: 1
+          });
+        }, 350);
+      });
+    }
+
+    const hardFilters = [userIdInput, ticketIdInput, sortSelect, perPageSelect].filter(Boolean);
+    hardFilters.forEach((el) => {
+      el.addEventListener('change', () => {
+        updateQuery({
+          q: qInput?.value.trim() || '',
+          user_id: userIdInput?.value || '',
+          ticket_id: ticketIdInput?.value || '',
+          sort: sortSelect?.value || 'updated_desc',
+          per_page: perPageSelect?.value || '20',
+          page: 1
+        });
+      });
+    });
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        updateQuery({
+          status: 'closed',
+          q: '',
+          user_id: '',
+          ticket_id: '',
+          sort: 'updated_desc',
+          per_page: '20',
+          page: 1
+        });
+      });
+    }
+
+    table.addEventListener('dblclick', (e) => {
+      const row = e.target.closest('.ticket-row');
+      if (!row) return;
+      const href = row.dataset.href;
+      if (href) window.location.href = href;
+    });
+
+    let currentContextRow = null;
+    function closeContextMenu() {
+      menu.classList.remove('show');
+      menu.style.position = '';
+      menu.style.left = '';
+      menu.style.top = '';
+      currentContextRow = null;
+    }
+
+    tbody.addEventListener('contextmenu', (e) => {
+      const row = e.target.closest('.ticket-row');
+      if (!row) return;
+      e.preventDefault();
+      currentContextRow = row;
+      menu.classList.add('show');
+      menu.style.position = 'fixed';
+      menu.style.left = `${e.clientX}px`;
+      menu.style.top = `${e.clientY}px`;
+      const toggleBtn = menu.querySelector('[data-action="toggle-status"]');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = row.dataset.status === 'open'
+          ? '<i class="bi bi-lock me-2"></i>Закрыть'
+          : '<i class="bi bi-unlock me-2"></i>Открыть';
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target)) closeContextMenu();
+    });
+    document.addEventListener('scroll', closeContextMenu, true);
+    window.addEventListener('resize', closeContextMenu);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeContextMenu();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && qInput) {
+        e.preventDefault();
+        qInput.focus();
+        qInput.select();
+      }
+    });
+
+    function createAndSubmitForm(action, fields) {
+      const form = document.createElement('form');
+      form.method = 'post';
+      form.action = action;
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrf_token';
+      csrfInput.value = csrf;
+      form.appendChild(csrfInput);
+      Object.keys(fields).forEach((key) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = fields[key];
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    }
+
+    menu.addEventListener('click', (e) => {
+      const actionBtn = e.target.closest('[data-action]');
+      if (!actionBtn || !currentContextRow) return;
+      const action = actionBtn.dataset.action;
+      const ticketId = currentContextRow.dataset.ticketId;
+      const href = currentContextRow.dataset.href;
+      if (!ticketId) return;
+      if (action === 'open' && href) {
+        window.location.href = href;
+        return;
+      }
+      if (action === 'toggle-status') {
+        const nextAction = currentContextRow.dataset.status === 'open' ? 'close' : 'open';
+        createAndSubmitForm(`/support/${ticketId}`, { action: nextAction });
+        return;
+      }
+      if (action === 'delete') {
+        if (!window.confirm(`Удалить тикет #${ticketId}?`)) return;
+        createAndSubmitForm(`/support/${ticketId}/delete`, {});
+      }
+    });
+  })();
+</script>
+{% endblock %}

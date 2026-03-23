@@ -1,0 +1,333 @@
+{% extends "Bootstrap/base.html" %}
+{% block title %}Настройки{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+    <div>
+      <h2 class="h4 mb-0">Настройки системы</h2>
+      <div class="text-muted small">Конфигурация панели, ботов, платежей и хостов</div>
+    </div>
+    <div class="d-flex gap-2">
+      <form action="{{ url_for('logout_page') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button class="btn btn-outline-secondary btn-sm" type="submit">Выйти</button>
+      </form>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
+    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#panel" type="button">Панель</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#bot" type="button">Бот</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#payments" type="button">Платежи</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#hosts" type="button">Хосты</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#support" type="button">Support/Мониторинг</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="panel" role="tabpanel">
+      <div class="card mb-3">
+        <div class="card-body">
+          <form action="{{ url_for('settings_page') }}" method="post" class="vstack gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="next_hash" id="settings-next-hash-panel" value="#panel" />
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label" for="panel_login">Логин панели</label>
+                <input class="form-control" id="panel_login" name="panel_login" value="{{ settings.panel_login or '' }}" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="panel_password">Новый пароль</label>
+                <input type="password" class="form-control" id="panel_password" name="panel_password" placeholder="Оставьте пустым, чтобы не менять">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="panel_brand_title">Название панели</label>
+                <input class="form-control" id="panel_brand_title" name="panel_brand_title" value="{{ settings.panel_brand_title or '' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="panel_template">Шаблон панели</label>
+                <select class="form-select" id="panel_template" name="panel_template">
+                  {% for tmpl in panel_templates %}
+                  <option value="{{ tmpl }}" {% if settings.panel_template == tmpl %}selected{% endif %}>{{ tmpl }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="backup_interval_days">Автобэкап (дни)</label>
+                <input class="form-control" id="backup_interval_days" name="backup_interval_days" type="number" min="0" step="1" value="{{ settings.backup_interval_days or '1' }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="domain">Домен панели</label>
+                <input class="form-control" id="domain" name="domain" value="{{ settings.domain or '' }}">
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary" type="submit">Сохранить</button>
+              <button class="btn btn-outline-primary" type="submit" formmethod="post" formaction="{{ url_for('backup_db_route') }}">Скачать бэкап БД</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <form action="{{ url_for('restore_db_route') }}" method="post" enctype="multipart/form-data" class="row g-2 align-items-end">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <div class="col-md-6">
+              <label class="form-label" for="existing_backup">Восстановить из архива</label>
+              <select class="form-select" id="existing_backup" name="existing_backup">
+                <option value="">— Выберите архив —</option>
+                {% for b in backups %}
+                <option value="{{ b.name }}">{{ b.name }} ({{ b.mtime }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="db_file">Или загрузите файл</label>
+              <input type="file" class="form-control" id="db_file" name="db_file" accept=".zip,.db">
+            </div>
+            <div class="col-md-2 d-grid">
+              <button class="btn btn-danger" type="submit">Восстановить</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="bot" role="tabpanel">
+      <div class="card">
+        <div class="card-body">
+          <form action="{{ url_for('settings_page') }}" method="post" class="vstack gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="next_hash" id="settings-next-hash-bot" value="#bot" />
+            <div class="row g-3">
+              <div class="col-md-4"><label class="form-label">Токен бота</label><input class="form-control" name="telegram_bot_token" value="{{ settings.telegram_bot_token or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">Username бота</label><input class="form-control" name="telegram_bot_username" value="{{ settings.telegram_bot_username or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">ID админа</label><input class="form-control" name="admin_telegram_id" value="{{ settings.admin_telegram_id or '' }}"></div>
+              <div class="col-md-6"><label class="form-label">Текст главного меню</label><textarea class="form-control" rows="3" name="main_menu_text">{{ settings.main_menu_text or '' }}</textarea></div>
+              <div class="col-md-6"><label class="form-label">Текст About</label><textarea class="form-control" rows="3" name="about_text">{{ settings.about_text or '' }}</textarea></div>
+              <div class="col-md-4"><label class="form-label">Support username</label><input class="form-control" name="support_user" value="{{ settings.support_user or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">Ссылка terms</label><input class="form-control" name="terms_url" value="{{ settings.terms_url or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">Ссылка privacy</label><input class="form-control" name="privacy_url" value="{{ settings.privacy_url or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">Ссылка канала</label><input class="form-control" name="channel_url" value="{{ settings.channel_url or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">Адрес TON кошелька</label><input class="form-control" name="ton_wallet_address" value="{{ settings.ton_wallet_address or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">TON API key</label><input class="form-control" name="tonapi_key" value="{{ settings.tonapi_key or '' }}"></div>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-md-3"><input type="hidden" name="force_subscription" value="false"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="force_subscription" name="force_subscription" value="true" {% if settings.force_subscription == 'true' %}checked{% endif %}><label class="form-check-label" for="force_subscription">Принудительная подписка</label></div></div>
+              <div class="col-md-3"><input type="hidden" name="trial_enabled" value="false"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="trial_enabled" name="trial_enabled" value="true" {% if settings.trial_enabled == 'true' %}checked{% endif %}><label class="form-check-label" for="trial_enabled">Триал</label></div></div>
+              <div class="col-md-3"><input type="hidden" name="enable_referrals" value="false"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="enable_referrals" name="enable_referrals" value="true" {% if settings.enable_referrals == 'true' %}checked{% endif %}><label class="form-check-label" for="enable_referrals">Рефералы</label></div></div>
+              <div class="col-md-3"><input type="hidden" name="enable_fixed_referral_bonus" value="false"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="enable_fixed_referral_bonus" name="enable_fixed_referral_bonus" value="true" {% if settings.enable_fixed_referral_bonus == 'true' %}checked{% endif %}><label class="form-check-label" for="enable_fixed_referral_bonus">Фикс бонус реферала</label></div></div>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-3"><label class="form-label">trial_duration_days</label><input class="form-control" name="trial_duration_days" value="{{ settings.trial_duration_days or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">referral_percentage</label><input class="form-control" name="referral_percentage" value="{{ settings.referral_percentage or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">referral_discount</label><input class="form-control" name="referral_discount" value="{{ settings.referral_discount or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">minimum_withdrawal</label><input class="form-control" name="minimum_withdrawal" value="{{ settings.minimum_withdrawal or '' }}"></div>
+            </div>
+
+            <button class="btn btn-primary" type="submit">Сохранить</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="payments" role="tabpanel">
+      <div class="card">
+        <div class="card-body">
+          <form action="{{ url_for('settings_page') }}" method="post" class="vstack gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="next_hash" id="settings-next-hash-payments" value="#payments" />
+            <div class="row g-3">
+              <div class="col-md-3"><label class="form-label">yookassa_shop_id</label><input class="form-control" name="yookassa_shop_id" value="{{ settings.yookassa_shop_id or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">yookassa_secret_key</label><input class="form-control" name="yookassa_secret_key" value="{{ settings.yookassa_secret_key or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">cryptobot_token</label><input class="form-control" name="cryptobot_token" value="{{ settings.cryptobot_token or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">receipt_email</label><input class="form-control" name="receipt_email" value="{{ settings.receipt_email or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">heleket_merchant_id</label><input class="form-control" name="heleket_merchant_id" value="{{ settings.heleket_merchant_id or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">heleket_api_key</label><input class="form-control" name="heleket_api_key" value="{{ settings.heleket_api_key or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">yoomoney_wallet</label><input class="form-control" name="yoomoney_wallet" value="{{ settings.yoomoney_wallet or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">yoomoney_secret</label><input class="form-control" name="yoomoney_secret" value="{{ settings.yoomoney_secret or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">yoomoney_api_token</label><input class="form-control" name="yoomoney_api_token" value="{{ settings.yoomoney_api_token or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">yoomoney_client_id</label><input class="form-control" name="yoomoney_client_id" value="{{ settings.yoomoney_client_id or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">yoomoney_client_secret</label><input class="form-control" name="yoomoney_client_secret" value="{{ settings.yoomoney_client_secret or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">yoomoney_redirect_uri</label><input class="form-control" name="yoomoney_redirect_uri" value="{{ settings.yoomoney_redirect_uri or '' }}"></div>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-md-3"><input type="hidden" name="sbp_enabled" value="false"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="sbp_enabled" id="sbp_enabled" value="true" {% if settings.sbp_enabled == 'true' %}checked{% endif %}><label class="form-check-label" for="sbp_enabled">SBP</label></div></div>
+              <div class="col-md-3"><input type="hidden" name="yoomoney_enabled" value="false"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="yoomoney_enabled" id="yoomoney_enabled" value="true" {% if settings.yoomoney_enabled == 'true' %}checked{% endif %}><label class="form-check-label" for="yoomoney_enabled">YooMoney</label></div></div>
+              <div class="col-md-3"><input type="hidden" name="stars_enabled" value="false"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="stars_enabled" id="stars_enabled" value="true" {% if settings.stars_enabled == 'true' %}checked{% endif %}><label class="form-check-label" for="stars_enabled">Telegram Stars</label></div></div>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-4"><label class="form-label">stars_per_rub</label><input class="form-control" name="stars_per_rub" value="{{ settings.stars_per_rub or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">stars_title</label><input class="form-control" name="stars_title" value="{{ settings.stars_title or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">stars_description</label><input class="form-control" name="stars_description" value="{{ settings.stars_description or '' }}"></div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary" type="submit">Сохранить</button>
+              <button class="btn btn-outline-primary" type="button" onclick="window.location.href='{{ url_for('yoomoney_connect_route') }}'">Подключить YooMoney OAuth</button>
+              <button class="btn btn-outline-secondary" type="submit" formmethod="post" formaction="{{ url_for('yoomoney_check_route') }}">Проверить токен</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="hosts" role="tabpanel">
+      <div class="card mb-3">
+        <div class="card-body">
+          <form action="{{ url_for('add_host_route') }}" method="post" class="row g-2 align-items-end">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <div class="col-md-3"><label class="form-label">Имя хоста</label><input class="form-control" name="host_name" required></div>
+            <div class="col-md-3"><label class="form-label">URL</label><input class="form-control" name="host_url" required></div>
+            <div class="col-md-2"><label class="form-label">Username</label><input class="form-control" name="host_username" required></div>
+            <div class="col-md-2"><label class="form-label">Password</label><input class="form-control" name="host_pass" required></div>
+            <div class="col-md-1"><label class="form-label">Inbound</label><input class="form-control" name="host_inbound_id" type="number" required></div>
+            <div class="col-md-1 d-grid"><button class="btn btn-primary" type="submit">Добавить</button></div>
+            <div class="col-12"><label class="form-label">Subscription URL</label><input class="form-control" name="host_subscription_url"></div>
+          </form>
+        </div>
+      </div>
+
+      {% for host in hosts %}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">{{ host.host_name }}</h6>
+          <form action="{{ url_for('delete_host_route', host_name=host.host_name) }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button class="btn btn-outline-danger btn-sm" type="submit">Удалить хост</button>
+          </form>
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <form action="{{ url_for('update_host_url_route') }}" method="post" class="input-group">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                <input class="form-control" name="host_url" value="{{ host.host_url or '' }}">
+                <button class="btn btn-outline-secondary" type="submit">URL</button>
+              </form>
+            </div>
+            <div class="col-md-6">
+              <form action="{{ url_for('rename_host_route') }}" method="post" class="input-group">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="old_host_name" value="{{ host.host_name }}" />
+                <input class="form-control" name="new_host_name" value="{{ host.host_name }}">
+                <button class="btn btn-outline-secondary" type="submit">Переименовать</button>
+              </form>
+            </div>
+            <div class="col-md-12">
+              <form action="{{ url_for('update_host_subscription_route') }}" method="post" class="input-group">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                <input class="form-control" name="host_subscription_url" value="{{ host.host_subscription_url or '' }}">
+                <button class="btn btn-outline-secondary" type="submit">Subscription URL</button>
+              </form>
+            </div>
+            <div class="col-md-12">
+              <form action="{{ url_for('update_host_ssh_route') }}" method="post" class="row g-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+                <div class="col-md-3"><input class="form-control" name="ssh_host" placeholder="SSH host" value="{{ host.ssh_host or '' }}"></div>
+                <div class="col-md-2"><input class="form-control" name="ssh_port" placeholder="22" value="{{ host.ssh_port or '' }}"></div>
+                <div class="col-md-2"><input class="form-control" name="ssh_user" placeholder="SSH user" value="{{ host.ssh_user or '' }}"></div>
+                <div class="col-md-3"><input class="form-control" name="ssh_password" placeholder="SSH password" value="{{ host.ssh_password or '' }}"></div>
+                <div class="col-md-2 d-grid"><button class="btn btn-outline-secondary" type="submit">SSH</button></div>
+              </form>
+            </div>
+          </div>
+
+          <div class="table-responsive mb-2">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Месяцы</th>
+                  <th>Цена</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for plan in host.plans %}
+                <tr>
+                  <td>
+                    <form action="{{ url_for('update_plan_route', plan_id=plan.plan_id) }}" method="post" class="d-flex gap-2">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <input class="form-control form-control-sm" name="plan_name" value="{{ plan.plan_name }}">
+                  </td>
+                  <td><input class="form-control form-control-sm" name="months" type="number" value="{{ plan.months }}"></td>
+                  <td><input class="form-control form-control-sm" name="price" type="number" step="0.01" value="{{ plan.price }}"></td>
+                  <td class="d-flex gap-1">
+                      <button class="btn btn-outline-secondary btn-sm" type="submit">Сохранить</button>
+                    </form>
+                    <form action="{{ url_for('delete_plan_route', plan_id=plan.plan_id) }}" method="post">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <button class="btn btn-outline-danger btn-sm" type="submit">Удалить</button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <form action="{{ url_for('add_plan_route') }}" method="post" class="row g-2 align-items-end">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="host_name" value="{{ host.host_name }}" />
+            <div class="col-md-5"><label class="form-label">Новый тариф</label><input class="form-control" name="plan_name" required></div>
+            <div class="col-md-3"><label class="form-label">Месяцы</label><input class="form-control" name="months" type="number" min="1" required></div>
+            <div class="col-md-3"><label class="form-label">Цена</label><input class="form-control" name="price" type="number" step="0.01" min="0" required></div>
+            <div class="col-md-1 d-grid"><button class="btn btn-primary" type="submit">+</button></div>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="tab-pane fade" id="support" role="tabpanel">
+      <div class="card">
+        <div class="card-body">
+          <form action="{{ url_for('settings_page') }}" method="post" class="vstack gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="next_hash" id="settings-next-hash-support" value="#support" />
+            <div class="row g-3">
+              <div class="col-md-4"><label class="form-label">support_bot_token</label><input class="form-control" name="support_bot_token" value="{{ settings.support_bot_token or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">support_bot_username</label><input class="form-control" name="support_bot_username" value="{{ settings.support_bot_username or '' }}"></div>
+              <div class="col-md-4"><label class="form-label">support_forum_chat_id</label><input class="form-control" name="support_forum_chat_id" value="{{ settings.support_forum_chat_id or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">monitoring_interval_sec</label><input class="form-control" name="monitoring_interval_sec" value="{{ settings.monitoring_interval_sec or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">monitoring_cpu_threshold</label><input class="form-control" name="monitoring_cpu_threshold" value="{{ settings.monitoring_cpu_threshold or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">monitoring_mem_threshold</label><input class="form-control" name="monitoring_mem_threshold" value="{{ settings.monitoring_mem_threshold or '' }}"></div>
+              <div class="col-md-3"><label class="form-label">monitoring_disk_threshold</label><input class="form-control" name="monitoring_disk_threshold" value="{{ settings.monitoring_disk_threshold or '' }}"></div>
+            </div>
+            <div class="row g-2">
+              <div class="col-md-4"><input type="hidden" name="monitoring_enabled" value="false"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="monitoring_enabled" name="monitoring_enabled" value="true" {% if settings.monitoring_enabled == 'true' %}checked{% endif %}><label class="form-check-label" for="monitoring_enabled">Мониторинг включен</label></div></div>
+            </div>
+            <button class="btn btn-primary" type="submit">Сохранить</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const tabs = document.querySelectorAll('#settingsTabs [data-bs-toggle="tab"]');
+    const activeFromQuery = '{{ request.args.get("tab","") }}';
+    if (activeFromQuery) {
+      const target = '#'+activeFromQuery;
+      const tabBtn = Array.from(tabs).find(t => t.getAttribute('data-bs-target') === target);
+      if (tabBtn) new bootstrap.Tab(tabBtn).show();
+    }
+    tabs.forEach((tab) => {
+      tab.addEventListener('shown.bs.tab', () => {
+        const target = tab.getAttribute('data-bs-target') || '#panel';
+        document.querySelectorAll('input[name="next_hash"]').forEach((hidden) => hidden.value = target);
+      });
+    });
+  })();
+</script>
+{% endblock %}

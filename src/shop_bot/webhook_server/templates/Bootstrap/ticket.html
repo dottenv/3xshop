@@ -1,0 +1,184 @@
+{% extends 'Bootstrap/base.html' %}
+{% block title %}Тикет #{{ ticket.ticket_id }}{% endblock %}
+{% block content %}
+<div class="container-fluid d-flex flex-column" style="min-height: calc(100vh - 140px);">
+  <div class="card flex-grow-1 d-flex flex-column">
+    <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+      <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('support_list_page') }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+          <div class="fw-semibold">Тикет #{{ ticket.ticket_id }}</div>
+          <div class="small text-muted">Пользователь: {{ ticket.user_id }}{% if ticket.subject %} • {{ ticket.subject }}{% endif %}</div>
+        </div>
+        <span id="ticket-status-badge" class="badge {% if ticket.status == 'open' %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+          {% if ticket.status == 'open' %}Открыт{% else %}Закрыт{% endif %}
+        </span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button id="ticket-refresh" type="button" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        {% if ticket.status == 'open' %}
+          <button type="submit" form="ticket-action-form" name="action" value="close" class="btn btn-sm btn-outline-warning">
+            <i class="bi bi-lock me-1"></i>Закрыть
+          </button>
+        {% else %}
+          <button type="submit" form="ticket-action-form" name="action" value="open" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-unlock me-1"></i>Открыть
+          </button>
+        {% endif %}
+        <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}" onsubmit="return confirm('Удалить тикет #{{ ticket.ticket_id }}?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div id="ticket-messages" class="card-body overflow-auto d-flex flex-column gap-2" style="min-height: 360px; max-height: calc(100vh - 300px);">
+      {% for m in messages %}
+        <div class="d-flex {% if m.sender == 'admin' %}justify-content-start{% else %}justify-content-end{% endif %}">
+          <div class="rounded border px-3 py-2 {% if m.sender == 'admin' %}bg-light{% else %}bg-primary text-white border-primary{% endif %}" style="max-width: 75%;">
+            <div class="small" style="white-space: pre-wrap;">{{ m.content | e }}</div>
+            <div class="small opacity-75 mt-1">{{ m.created_at }}</div>
+          </div>
+        </div>
+      {% else %}
+        <div class="h-100 d-flex align-items-center justify-content-center text-muted">
+          Сообщений пока нет
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="card-footer">
+      <form id="ticket-action-form" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if ticket.status == 'open' %}
+          <div class="d-flex flex-column gap-2">
+            <textarea id="reply-text" name="message" rows="2" maxlength="4000" class="form-control" placeholder="Введите сообщение..."></textarea>
+            <div class="d-flex align-items-center justify-content-between">
+              <div id="reply-counter" class="small text-muted">0/4000</div>
+              <button id="reply-submit" type="submit" name="action" value="reply" class="btn btn-primary">
+                <i class="bi bi-send me-1"></i>Отправить
+              </button>
+            </div>
+          </div>
+        {% else %}
+          <div class="alert alert-secondary mb-0 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span>Тикет закрыт. Откройте тикет для отправки сообщений.</span>
+            <button type="submit" name="action" value="open" class="btn btn-sm btn-success">
+              <i class="bi bi-unlock me-1"></i>Открыть тикет
+            </button>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const messagesRoot = document.getElementById('ticket-messages');
+    const refreshBtn = document.getElementById('ticket-refresh');
+    const textarea = document.getElementById('reply-text');
+    const counter = document.getElementById('reply-counter');
+    const form = document.getElementById('ticket-action-form');
+    const submitBtn = document.getElementById('reply-submit');
+    const statusBadge = document.getElementById('ticket-status-badge');
+    const apiUrl = "{{ url_for('support_ticket_messages_api', ticket_id=ticket.ticket_id) }}";
+    const initialStatus = "{{ ticket.status }}";
+    let previousSignature = '';
+
+    function scrollToBottom() {
+      if (!messagesRoot) return;
+      messagesRoot.scrollTop = messagesRoot.scrollHeight;
+    }
+
+    function renderMessages(items) {
+      if (!messagesRoot) return;
+      if (!Array.isArray(items) || !items.length) {
+        messagesRoot.innerHTML = '<div class="h-100 d-flex align-items-center justify-content-center text-muted">Сообщений пока нет</div>';
+        return;
+      }
+      messagesRoot.innerHTML = items.map((m) => {
+        const isAdmin = m.sender === 'admin';
+        const alignClass = isAdmin ? 'justify-content-start' : 'justify-content-end';
+        const bubbleClass = isAdmin ? 'rounded border px-3 py-2 bg-light' : 'rounded border px-3 py-2 bg-primary text-white border-primary';
+        const safeText = String(m.content || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+          .replace(/\n/g, '<br>');
+        return `<div class="d-flex ${alignClass}"><div class="${bubbleClass}" style="max-width: 75%;"><div class="small">${safeText}</div><div class="small opacity-75 mt-1">${m.created_at || ''}</div></div></div>`;
+      }).join('');
+    }
+
+    function updateStatusBadge(status) {
+      if (!statusBadge || !status) return;
+      statusBadge.textContent = status === 'open' ? 'Открыт' : 'Закрыт';
+      statusBadge.classList.remove('text-bg-success', 'text-bg-secondary');
+      statusBadge.classList.add(status === 'open' ? 'text-bg-success' : 'text-bg-secondary');
+    }
+
+    async function refreshMessages() {
+      try {
+        const response = await fetch(apiUrl, { cache: 'no-store', credentials: 'same-origin' });
+        if (!response.ok) return;
+        const data = await response.json();
+        const signature = JSON.stringify(data.messages || []);
+        if (signature !== previousSignature) {
+          previousSignature = signature;
+          renderMessages(data.messages || []);
+          scrollToBottom();
+        }
+        updateStatusBadge(data.status);
+        if (data.status && data.status !== initialStatus) {
+          window.location.reload();
+          return;
+        }
+      } catch (e) {
+      }
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', refreshMessages);
+    }
+
+    if (textarea && counter) {
+      textarea.addEventListener('input', () => {
+        counter.textContent = `${textarea.value.length}/4000`;
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
+      });
+      textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (textarea.value.trim() && form) {
+            if (submitBtn) submitBtn.click();
+          }
+        }
+      });
+      textarea.focus();
+    }
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        const action = e.submitter?.value || '';
+        if (action === 'reply' && textarea && !textarea.value.trim()) {
+          e.preventDefault();
+          textarea.focus();
+        }
+      });
+    }
+
+    scrollToBottom();
+    refreshMessages();
+    setInterval(refreshMessages, 5000);
+  })();
+</script>
+{% endblock %}

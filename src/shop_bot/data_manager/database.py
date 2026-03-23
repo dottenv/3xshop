@@ -2426,26 +2426,75 @@ def delete_ticket(ticket_id: int) -> bool:
         logging.error(f"Не удалось delete ticket {ticket_id}: {e}")
         return False
 
-def get_tickets_paginated(page: int = 1, per_page: int = 20, status: str | None = None) -> tuple[list[dict], int]:
+def get_tickets_paginated(
+    page: int = 1,
+    per_page: int = 20,
+    status: str | None = None,
+    q: str | None = None,
+    user_id: int | None = None,
+    ticket_id: int | None = None,
+    sort: str = 'updated_desc'
+) -> tuple[list[dict], int]:
+    try:
+        page = max(1, int(page or 1))
+        per_page = max(1, min(200, int(per_page or 20)))
+    except Exception:
+        page, per_page = 1, 20
     offset = (page - 1) * per_page
+
+    where_clauses: list[str] = []
+    where_params: list = []
+
+    status_n = status if status in ('open', 'closed') else None
+    if status_n:
+        where_clauses.append("status = ?")
+        where_params.append(status_n)
+
+    if user_id is not None:
+        try:
+            user_id_n = int(user_id)
+            where_clauses.append("user_id = ?")
+            where_params.append(user_id_n)
+        except Exception:
+            pass
+
+    if ticket_id is not None:
+        try:
+            ticket_id_n = int(ticket_id)
+            where_clauses.append("ticket_id = ?")
+            where_params.append(ticket_id_n)
+        except Exception:
+            pass
+
+    q_n = (q or '').strip()
+    if q_n:
+        like = f"%{q_n}%"
+        where_clauses.append("(CAST(ticket_id AS TEXT) LIKE ? OR CAST(user_id AS TEXT) LIKE ? OR COALESCE(subject, '') LIKE ? COLLATE NOCASE)")
+        where_params.extend([like, like, like])
+
+    sort_map = {
+        'updated_desc': "datetime(updated_at) DESC, ticket_id DESC",
+        'updated_asc': "datetime(updated_at) ASC, ticket_id ASC",
+        'id_desc': "ticket_id DESC",
+        'id_asc': "ticket_id ASC",
+        'status': "CASE status WHEN 'open' THEN 0 ELSE 1 END ASC, datetime(updated_at) DESC, ticket_id DESC"
+    }
+    order_by = sort_map.get((sort or '').strip(), sort_map['updated_desc'])
+
+    where_sql = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    total_sql = f"SELECT COUNT(*) FROM support_tickets{where_sql}"
+    data_sql = (
+        f"SELECT * FROM support_tickets{where_sql} "
+        f"ORDER BY {order_by} LIMIT ? OFFSET ?"
+    )
+
     try:
         with sqlite3.connect(DB_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            if status:
-                cursor.execute("SELECT COUNT(*) FROM support_tickets WHERE status = ?", (status,))
-                total = cursor.fetchone()[0] or 0
-                cursor.execute(
-                    "SELECT * FROM support_tickets WHERE status = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-                    (status, per_page, offset)
-                )
-            else:
-                cursor.execute("SELECT COUNT(*) FROM support_tickets")
-                total = cursor.fetchone()[0] or 0
-                cursor.execute(
-                    "SELECT * FROM support_tickets ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-                    (per_page, offset)
-                )
+            cursor.execute(total_sql, where_params)
+            total = cursor.fetchone()[0] or 0
+            cursor.execute(data_sql, [*where_params, per_page, offset])
             return [dict(r) for r in cursor.fetchall()], total
     except sqlite3.Error as e:
         logging.error("Не удалось get paginated support tickets: %s", e)

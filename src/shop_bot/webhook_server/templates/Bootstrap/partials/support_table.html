@@ -1,0 +1,24 @@
+{% for t in tickets %}
+<tr class="ticket-row" data-ticket-id="{{ t.ticket_id }}" data-status="{{ t.status }}" data-href="{{ url_for('support_ticket_page', ticket_id=t.ticket_id) }}">
+  <td>
+    {% if t.status == 'open' %}
+      <span class="badge text-bg-success">Открыт</span>
+    {% else %}
+      <span class="badge text-bg-secondary">Закрыт</span>
+    {% endif %}
+  </td>
+  <td class="text-nowrap">#{{ t.ticket_id }}</td>
+  <td class="text-nowrap">{{ t.user_id }}</td>
+  <td>{{ t.subject or 'Без темы' }}</td>
+  <td class="text-nowrap">{{ t.updated_at }}</td>
+  <td class="text-end">
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('support_ticket_page', ticket_id=t.ticket_id) }}">
+      <i class="bi bi-box-arrow-up-right"></i>
+    </a>
+  </td>
+</tr>
+{% else %}
+<tr>
+  <td colspan="6" class="text-center text-muted py-4">Тикеты не найдены</td>
+</tr>
+{% endfor %}
