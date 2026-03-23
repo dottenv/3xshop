@@ -44,7 +44,7 @@
   }
   .message-bubble {
     max-width: min(80%, 720px);
-    border-radius: 0;
+    border-radius: var(--bs-border-radius);
     padding: 0.625rem 0.75rem;
     border: 1px solid var(--bs-border-color);
   }
@@ -68,12 +68,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0;
-  }
-  .ticket-topbar .btn,
-  .ticket-composer .btn,
-  .ticket-composer .form-control {
-    border-radius: 0 !important;
+    border-radius: var(--bs-border-radius);
   }
   .ticket-topbar .btn-group > form {
     display: inline-block;
