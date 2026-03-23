@@ -1,0 +1,31 @@
+{% for k in keys %}
+<tr>
+  <td class="small text-muted">#{{ k.key_id }}</td>
+  <td class="small">{{ k.user_id or '-' }}</td>
+  <td class="small"><span class="badge text-bg-light">{{ k.host_name }}</span></td>
+  <td class="small text-truncate" style="max-width:160px" title="{{ k.key_email }}">{{ k.key_email }}</td>
+  <td class="small">{{ k.expiry_date or '—' }}</td>
+  <td class="text-center">
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        Действия
+      </button>
+      <div class="dropdown-menu dropdown-menu-end">
+        <button type="button" class="dropdown-item" data-action="edit-comment" data-key-id="{{ k.key_id }}" data-comment="{{ (k.comment or '')|e }}">
+          <i class="bi bi-chat-left-text me-2"></i>Заметка
+        </button>
+        <button type="button" class="dropdown-item" data-action="edit-expiry" data-key-id="{{ k.key_id }}" data-expiry="{{ k.expiry_date or '' }}">
+          <i class="bi bi-calendar-event me-2"></i>Продлить
+        </button>
+        <div class="dropdown-divider"></div>
+        <form action="{{ url_for('delete_key_route', key_id=k.key_id) }}" method="post" data-confirm="Удалить ключ #{{ k.key_id }}?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="dropdown-item text-danger">
+            <i class="bi bi-trash3 me-2"></i>Удалить
+          </button>
+        </form>
+      </div>
+    </div>
+  </td>
+</tr>
+{% endfor %}

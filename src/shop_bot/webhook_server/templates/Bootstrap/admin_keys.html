@@ -1,0 +1,389 @@
+{% extends "Bootstrap/base.html" %}
+{% block title %}Админ — Ключи{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row g-3">
+    <div class="col-xl-4">
+      <div class="card sticky-top" style="top: 1rem;">
+        <div class="card-header">
+          <h5 class="mb-0">Выдать ключ</h5>
+        </div>
+        <div class="card-body">
+          <form id="create-key-form" action="{{ url_for('create_key_standalone_ajax_route') }}" method="post" class="vstack gap-3" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input type="hidden" name="key_type" id="key_type" value="personal" />
+
+            <div class="btn-group" role="group">
+              <input type="radio" class="btn-check" name="btn-key-type" id="btn-type-personal" checked>
+              <label class="btn btn-outline-primary" for="btn-type-personal">Личный</label>
+              <input type="radio" class="btn-check" name="btn-key-type" id="btn-type-gift">
+              <label class="btn btn-outline-secondary" for="btn-type-gift">Подарок</label>
+            </div>
+
+            <div id="group_user">
+              <label class="form-label mb-1" for="user_id">Пользователь</label>
+              <input type="text" class="form-control" id="user_id" name="user_id" list="users-list" placeholder="ID или @username" required />
+              <datalist id="users-list">
+                {% for u in users %}
+                <option value="{{ u.telegram_id }}">{{ '@' + (u.username or '') }}</option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="form-label mb-1" for="host_name">Сервер</label>
+              <select class="form-select" id="host_name" name="host_name" required>
+                <option value="" selected disabled>Выберите сервер...</option>
+                {% for h in hosts %}
+                <option value="{{ h.host_name }}" data-inbound="{{ h.host_inbound_id }}">{{ h.host_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label mb-1" for="plan_select">Тариф</label>
+              <div class="input-group">
+                <select class="form-select" id="plan_select">
+                  <option value="">—</option>
+                </select>
+                <span class="input-group-text" id="plan_price">— ₽</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label mb-1" for="expiry_date">Срок действия</label>
+              <input type="text" class="form-control mb-2" id="expiry_date" name="expiry_date" placeholder="ГГГГ-ММ-ДД ЧЧ:ММ" />
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" data-preset="30">+30д</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" data-preset="90">+90д</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" data-preset="180">+180д</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" data-preset="365">+1г</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label mb-1" for="key_email">Email</label>
+              <input type="email" class="form-control" id="key_email" name="key_email" readonly />
+            </div>
+
+            <div>
+              <label class="form-label mb-1" for="comment">Заметка</label>
+              <input type="text" class="form-control" id="comment" name="comment" placeholder="Видно только вам" />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100" id="btn-submit-create">
+              <i class="bi bi-key-fill me-1"></i>Создать ключ
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Все ключи</h5>
+          <form action="{{ url_for('sweep_expired_keys_route') }}" method="post" data-confirm="Удалить все истёкшие ключи?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash3 me-1"></i>Очистить истёкшие
+            </button>
+          </form>
+        </div>
+        <div class="table-responsive" style="max-height: calc(100vh - 220px); overflow: auto;">
+          <table class="table table-sm table-hover align-middle mb-0" id="keys-table">
+            <thead>
+              <tr>
+                <th class="bg-body sticky-top">ID</th>
+                <th class="bg-body sticky-top">Пользователь</th>
+                <th class="bg-body sticky-top">Сервер</th>
+                <th class="bg-body sticky-top">Email</th>
+                <th class="bg-body sticky-top">Истекает</th>
+                <th class="bg-body sticky-top text-center">Действия</th>
+              </tr>
+            </thead>
+            <tbody id="keys-tbody" data-fetch-url="{{ url_for('admin_keys_table_partial') }}" data-fetch-interval="10000">
+              {% include 'Bootstrap/partials/admin_keys_table.html' %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script id="users-data" type="application/json">{{ users | tojson }}</script>
+
+<div class="modal fade" id="expiryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Изменить срок</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Добавить/убавить дней</label>
+        <input type="number" class="form-control" id="expiryDelta" placeholder="Например: 30 или -7" />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary btn-sm" id="expiry-save-btn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="commentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Заметка к ключу</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Комментарий</label>
+        <textarea class="form-control" id="commentInput" rows="3"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary btn-sm" id="comment-save-btn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const usersDataEl = document.getElementById('users-data');
+    const USERS = usersDataEl ? JSON.parse(usersDataEl.textContent || '[]') : [];
+    const USER_MAP = {};
+    USERS.forEach(u => { if (u && u.username) USER_MAP['@' + String(u.username).toLowerCase()] = u.telegram_id; });
+
+    const form = document.getElementById('create-key-form');
+    const submitBtn = document.getElementById('btn-submit-create');
+    const keyTypeInput = document.getElementById('key_type');
+    const btnTypePersonal = document.getElementById('btn-type-personal');
+    const btnTypeGift = document.getElementById('btn-type-gift');
+    const hostSel = document.getElementById('host_name');
+    const planSel = document.getElementById('plan_select');
+    const priceEl = document.getElementById('plan_price');
+    const expiryInput = document.getElementById('expiry_date');
+    const emailInput = document.getElementById('key_email');
+    const userInput = document.getElementById('user_id');
+    const userGroup = document.getElementById('group_user');
+    const keysTbody = document.getElementById('keys-tbody');
+    if (!form || !submitBtn || !keysTbody) return;
+
+    function getCsrf() {
+      return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
+
+    async function refreshKeysTable() {
+      const url = keysTbody.getAttribute('data-fetch-url');
+      if (!url) return;
+      try {
+        const resp = await fetch(url, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
+        if (resp.ok) keysTbody.innerHTML = await resp.text();
+      } catch(_) {}
+    }
+
+    function setExpiryDays(days) {
+      if (!expiryInput) return;
+      const d = new Date();
+      d.setDate(d.getDate() + Number(days || 0));
+      const pad = n => String(n).padStart(2, '0');
+      expiryInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    document.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const add = Number(btn.getAttribute('data-preset')) || 0;
+        if (add > 0) setExpiryDays(add);
+      });
+    });
+
+    async function loadPlans() {
+      if (!hostSel || !planSel) return;
+      const host = hostSel.value;
+      if (!host) {
+        planSel.innerHTML = '<option value="">— Не выбран —</option>';
+        planSel.disabled = true;
+        if (priceEl) priceEl.textContent = '— ₽';
+        return;
+      }
+      planSel.disabled = true;
+      planSel.innerHTML = '<option value="">Загрузка...</option>';
+      try {
+        const res = await fetch(`/admin/hosts/${encodeURIComponent(host)}/plans`, { credentials: 'same-origin' });
+        const d = await res.json();
+        const items = (d && d.ok && d.items) ? d.items : [];
+        planSel.innerHTML = '<option value="">— Не выбран —</option>' +
+          items.map(p => `<option value="${p.plan_id}" data-months="${p.months}" data-price="${p.price || 0}">${p.plan_name} (${p.months} мес.) — ${Number(p.price || 0).toFixed(0)} ₽</option>`).join('');
+        planSel.disabled = false;
+        if (priceEl) priceEl.textContent = '— ₽';
+      } catch(_) {
+        planSel.innerHTML = '<option value="">— Не выбран —</option>';
+        planSel.disabled = false;
+        if (priceEl) priceEl.textContent = '— ₽';
+      }
+    }
+
+    hostSel?.addEventListener('change', loadPlans);
+    if (hostSel?.value) loadPlans();
+
+    planSel?.addEventListener('change', () => {
+      const opt = planSel.options[planSel.selectedIndex];
+      const months = opt ? Number(opt.getAttribute('data-months') || 0) : 0;
+      const price = opt ? Number(opt.getAttribute('data-price') || 0) : 0;
+      if (priceEl) priceEl.textContent = price > 0 ? `${price.toFixed(0)} ₽` : '— ₽';
+      if (months > 0) setExpiryDays(months * 30);
+    });
+
+    async function normalizeUserId() {
+      if (!userInput) return;
+      const raw = String(userInput.value || '').trim();
+      if (!raw) return;
+      if (!/^[0-9]+$/.test(raw)) {
+        const key = raw.startsWith('@') ? raw.toLowerCase() : ('@' + raw.toLowerCase());
+        if (USER_MAP[key]) userInput.value = String(USER_MAP[key]);
+      }
+    }
+
+    async function maybeGenEmail() {
+      if (!emailInput) return;
+      const type = keyTypeInput?.value || 'personal';
+      if (type === 'gift') {
+        try {
+          const res = await fetch('/admin/keys/generate-gift-email', { credentials: 'same-origin' });
+          const data = await res.json();
+          if (data && data.ok && data.email) emailInput.value = data.email;
+        } catch(_) {}
+        return;
+      }
+      const userId = userInput?.value && String(userInput.value).trim();
+      if (!userId) return;
+      try {
+        const res = await fetch(`/admin/keys/generate-email?user_id=${encodeURIComponent(userId)}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data && data.ok && data.email) emailInput.value = data.email;
+      } catch(_) {}
+    }
+
+    function applyKeyTypeUI() {
+      const type = keyTypeInput?.value || 'personal';
+      if (userGroup) userGroup.style.display = type === 'gift' ? 'none' : '';
+      maybeGenEmail();
+    }
+
+    btnTypePersonal?.addEventListener('change', (e) => {
+      if (!e.target.checked) return;
+      if (keyTypeInput) keyTypeInput.value = 'personal';
+      applyKeyTypeUI();
+    });
+    btnTypeGift?.addEventListener('change', (e) => {
+      if (!e.target.checked) return;
+      if (keyTypeInput) keyTypeInput.value = 'gift';
+      applyKeyTypeUI();
+    });
+    applyKeyTypeUI();
+
+    userInput?.addEventListener('blur', () => { normalizeUserId(); maybeGenEmail(); });
+    userInput?.addEventListener('change', () => { normalizeUserId(); maybeGenEmail(); });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await maybeGenEmail();
+      submitBtn.disabled = true;
+      const oldHtml = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Создаю...';
+      try {
+        const fd = new FormData(form);
+        const res = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({ ok: false }));
+        if (data && data.ok) {
+          form.reset();
+          applyKeyTypeUI();
+          await refreshKeysTable();
+        } else {
+          alert(data.error || 'Не удалось создать ключ');
+        }
+      } catch(_) {
+        alert('Ошибка при создании ключа');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = oldHtml;
+      }
+    });
+
+    document.addEventListener('submit', (e) => {
+      const formEl = e.target.closest('form[data-confirm]');
+      if (!formEl) return;
+      const msg = formEl.getAttribute('data-confirm') || 'Подтвердите действие';
+      if (!window.confirm(msg)) e.preventDefault();
+    }, true);
+
+    const expiryModal = document.getElementById('expiryModal');
+    const expiryDeltaInput = document.getElementById('expiryDelta');
+    const expirySaveBtn = document.getElementById('expiry-save-btn');
+    let currentKeyForExpiry = null;
+
+    const commentModal = document.getElementById('commentModal');
+    const commentInput = document.getElementById('commentInput');
+    const commentSaveBtn = document.getElementById('comment-save-btn');
+    let currentKeyForComment = null;
+
+    document.addEventListener('click', (e) => {
+      const expiryBtn = e.target.closest('[data-action="edit-expiry"]');
+      if (expiryBtn && expiryModal) {
+        currentKeyForExpiry = expiryBtn.getAttribute('data-key-id');
+        expiryDeltaInput.value = '';
+        (bootstrap.Modal.getInstance(expiryModal) || new bootstrap.Modal(expiryModal)).show();
+      }
+      const commentBtn = e.target.closest('[data-action="edit-comment"]');
+      if (commentBtn && commentModal) {
+        currentKeyForComment = commentBtn.getAttribute('data-key-id');
+        commentInput.value = commentBtn.getAttribute('data-comment') || '';
+        (bootstrap.Modal.getInstance(commentModal) || new bootstrap.Modal(commentModal)).show();
+      }
+    });
+
+    expirySaveBtn?.addEventListener('click', async () => {
+      const val = String(expiryDeltaInput.value || '').trim();
+      if (!currentKeyForExpiry || !val) return;
+      const delta = Number(val);
+      if (!Number.isFinite(delta) || Math.abs(delta) > 3650) return;
+      expirySaveBtn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append('csrf_token', getCsrf());
+        fd.append('delta_days', String(delta));
+        const resp = await fetch(`/admin/keys/${encodeURIComponent(currentKeyForExpiry)}/adjust-expiry`, { method: 'POST', body: fd, credentials: 'same-origin' });
+        if (resp.ok) {
+          bootstrap.Modal.getInstance(expiryModal)?.hide();
+          await refreshKeysTable();
+        }
+      } finally {
+        expirySaveBtn.disabled = false;
+      }
+    });
+
+    commentSaveBtn?.addEventListener('click', async () => {
+      if (!currentKeyForComment) return;
+      commentSaveBtn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append('csrf_token', getCsrf());
+        fd.append('comment', commentInput.value || '');
+        const resp = await fetch(`/admin/keys/${encodeURIComponent(currentKeyForComment)}/comment`, { method: 'POST', body: fd, credentials: 'same-origin' });
+        if (resp.ok) {
+          bootstrap.Modal.getInstance(commentModal)?.hide();
+          await refreshKeysTable();
+        }
+      } finally {
+        commentSaveBtn.disabled = false;
+      }
+    });
+  })();
+</script>
+{% endblock %}

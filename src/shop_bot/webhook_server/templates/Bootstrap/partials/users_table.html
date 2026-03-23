@@ -1,29 +1,29 @@
 {% for user in users %}
 <tr>
-  <td>
+  <td class="py-2">
     <div class="d-flex flex-column">
       <div class="fw-semibold">@{{ user.username or 'N/A' }}</div>
       <div class="text-muted small">{{ user.telegram_id }}</div>
     </div>
   </td>
-  <td>
+  <td class="py-2">
     {% if user.is_banned %}
       <span class="badge text-bg-danger">Забанен</span>
     {% else %}
       <span class="badge text-bg-success">Активен</span>
     {% endif %}
   </td>
-  <td>
+  <td class="py-2">
     {% if user.keys_count and user.keys_count > 0 %}
       <span class="badge text-bg-primary">{{ user.keys_count }} шт.</span>
     {% else %}
       <span class="text-muted">—</span>
     {% endif %}
   </td>
-  <td>
+  <td class="py-2">
     <div class="fw-semibold">{{ '%.2f'|format(user.balance or 0) }} ₽</div>
   </td>
-  <td class="text-end">
+  <td class="text-end py-2">
     <div class="dropdown">
       <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
         Действия
