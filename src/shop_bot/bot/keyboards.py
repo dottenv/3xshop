@@ -849,10 +849,13 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
     builder.adjust(1)
     return builder.as_markup()
 
-def create_key_info_keyboard(key_id: int) -> InlineKeyboardMarkup:
+def create_key_info_keyboard(key_id: int, subscription_url: str | None = None) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="⬇️ Скачать приложение", callback_data=f"download_apps_{key_id}")
-    builder.button(text="🔗 Подключиться", callback_data=f"connect_direct_{key_id}")
+    if subscription_url:
+        builder.button(text="🔗 Подключиться", url=subscription_url)
+    else:
+        builder.button(text="🔗 Подключиться", callback_data=f"connect_direct_{key_id}")
     builder.button(text=(get_setting("btn_extend_key") or "➕ Продлить этот ключ"), callback_data=f"extend_key_{key_id}")
     builder.button(text=(get_setting("btn_show_qr") or "📱 Показать QR-код"), callback_data=f"show_qr_{key_id}")
     builder.button(text=(get_setting("btn_switch_server") or "🌍 Сменить сервер"), callback_data=f"switch_server_{key_id}")

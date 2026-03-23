@@ -1306,14 +1306,14 @@ def get_user_router() -> Router:
             final_text = get_purchase_success_text("готов", get_next_key_number(user_id) -1, new_expiry_date, result['connection_string'])
             # Вместо удаления сообщения (что может быть запрещено Telegram), сначала пытаемся отредактировать его
             try:
-                await message.edit_text(text=final_text, reply_markup=keyboards.create_key_info_keyboard(new_key_id), disable_web_page_preview=True)
+                await message.edit_text(text=final_text, reply_markup=keyboards.create_key_info_keyboard(new_key_id, result['connection_string']), disable_web_page_preview=True)
             except TelegramBadRequest:
                 # Фолбэк: если редактирование невозможно (например, старое сообщение), попробуем удалить и отправить новое
                 try:
                     await message.delete()
                 except Exception:
                     pass
-                await message.answer(text=final_text, reply_markup=keyboards.create_key_info_keyboard(new_key_id))
+                await message.answer(text=final_text, reply_markup=keyboards.create_key_info_keyboard(new_key_id, result['connection_string']))
 
         except Exception as e:
             logger.error(f"Ошибка создания пробного ключа для пользователя {user_id} на хосте {host_name}: {e}", exc_info=True)
@@ -1348,7 +1348,7 @@ def get_user_router() -> Router:
             
             await callback.message.edit_text(
                 text=final_text,
-                reply_markup=keyboards.create_key_info_keyboard(key_id_to_show)
+                reply_markup=keyboards.create_key_info_keyboard(key_id_to_show, connection_string)
             )
         except Exception as e:
             logger.error(f"Ошибка показа ключа {key_id_to_show}: {e}")
@@ -1455,7 +1455,7 @@ def get_user_router() -> Router:
                     final_text = get_key_info_text(key_number, expiry_date, created_date, connection_string)
                     await callback.message.edit_text(
                         text=final_text,
-                        reply_markup=keyboards.create_key_info_keyboard(key_id)
+                        reply_markup=keyboards.create_key_info_keyboard(key_id, connection_string)
                     )
                 else:
                     await callback.message.edit_text(
@@ -1620,45 +1620,6 @@ def get_user_router() -> Router:
             )
         except TelegramBadRequest:
             pass
-
-    @user_router.callback_query(F.data.startswith("connect_direct_"))
-    @registration_required
-    async def connect_direct_handler(callback: types.CallbackQuery):
-        await callback.answer()
-        key_id = int(callback.data.split("_")[2])
-        
-        try:
-            # Получаем данные ключа
-            key_data = get_key_by_id(key_id)
-            if not key_data:
-                await callback.message.edit_text("❌ Ключ не найден")
-                return
-                
-            details = await xui_api.get_key_details_from_host(key_data)
-            if not details or not details['connection_string']:
-                await callback.message.edit_text("❌ Ошибка на сервере. Не удалось получить данные ключа.")
-                return
-                
-            subscription_url = details['connection_string']  # Это уже HTTPS ссылка типа https://host:port/user/uuid
-            
-            # Создаем кнопку с прямой HTTPS ссылкой на подписку
-            builder = InlineKeyboardBuilder()
-            builder.button(text="🔗 Открыть подписку", url=subscription_url)
-            builder.button(text="⬅️ Назад к ключу", callback_data=f"show_key_{key_id}")
-            builder.adjust(1, 1)
-
-            await callback.message.edit_text(
-                "🔗 <b>Подписка клиента</b>\n\n"
-                "📱 Нажмите кнопку ниже — откроется ваша подписка в браузере.",
-                reply_markup=builder.as_markup(),
-                disable_web_page_preview=True,
-            )
-        except Exception as e:
-            logger.error(f"Ошибка в обработчике connect_direct: {e}")
-            try:
-                await callback.message.edit_text("❌ Произошла ошибка. Попробуйте еще раз.")
-            except:
-                pass
 
     @user_router.callback_query(F.data.startswith("copy_config_"))
     @registration_required
@@ -3437,7 +3398,7 @@ async def process_successful_payment(bot: Bot, metadata: dict):
         await bot.send_message(
             chat_id=user_id,
             text=final_text,
-            reply_markup=keyboards.create_key_info_keyboard(key_id)
+            reply_markup=keyboards.create_key_info_keyboard(key_id, connection_string or "")
         )
 
         try:
