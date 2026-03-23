@@ -1702,38 +1702,52 @@ def get_user_router() -> Router:
                 
             connection_string = details['connection_string']
             
-            # Формируем ссылку для приложения
-            if app_scheme in ["v2rayng://", "happ://"]:
-                # Для мобильных приложений используем прямую ссылку на конфигурацию
-                app_link = f"{app_scheme}{connection_string}"
-            elif app_scheme in ["v2box://", "v2rayn://", "happ-desktop://"]:
-                # Для десктопных приложений может потребоваться другой формат
-                app_link = f"{app_scheme}{connection_string}"
+            # Импортируем urllib для URL encoding
+            from urllib.parse import quote
+            
+            # Формируем правильные ссылки для приложений
+            # Простое и надежное решение - не используем внешние сервисы
+            if app_scheme == "v2rayng://":
+                app_name = "V2RayNG"
+                
+            elif app_scheme == "happ://":
+                app_name = "Happ"
+                
+            elif app_scheme == "v2box://":
+                app_name = "V2Box"
+                
+            elif app_scheme == "v2rayn://":
+                app_name = "V2RayN"
+                
+            elif app_scheme == "happ-desktop://":
+                app_name = "Happ Desktop"
+                
             else:
-                app_link = connection_string
+                app_name = "приложение"
             
-            # Создаем кнопку с ссылкой
+            # Не используем внешние ссылки для надежности
+            app_link = None
+            
+            # Создаем кнопки
             builder = InlineKeyboardBuilder()
-            builder.button(text="🔗 Открыть в приложении", url=app_link)
+            
+            if app_link:
+                # Для всех приложений используем HTTPS ссылки
+                builder.button(text="🔗 Импорт конфигурации", url=app_link)
+            
+            builder.button(text="📋 Копировать конфигурацию", callback_data=f"copy_config_{key_id}")
             builder.button(text="⬅️ Назад к выбору", callback_data=f"connect_apps_{key_id}")
-            builder.adjust(1)
-            
-            app_names = {
-                "v2rayng://": "V2RayNG",
-                "happ://": "Happ",
-                "v2box://": "V2Box", 
-                "v2rayn://": "V2RayN",
-                "happ-desktop://": "Happ Desktop"
-            }
-            
-            app_name = app_names.get(app_scheme, "приложение")
+            builder.adjust(1, 2)
             
             await callback.message.edit_text(
                 f"🔗 <b>Подключение через {app_name}</b>\n\n"
-                f"Нажмите на кнопку ниже, чтобы открыть конфигурацию в приложении:\n"
-                f"<code>{app_link}</code>\n\n"
-                f"Если ссылка не работает, скопируйте конфигурацию вручную:\n"
-                f"<code>{connection_string}</code>",
+                f"1. Нажмите кнопку ниже для импорта конфигурации\n"
+                f"2. Или скопируйте конфигурацию вручную:\n"
+                f"<code>{connection_string}</code>\n\n"
+                f"💡 <b>Инструкция:</b>\n"
+                f"• Для мобильных приложений установите приложение из меню 'Скачать'\n"
+                f"• Нажмите кнопку импорта выше\n"
+                f"• Приложение автоматически откроется с готовой конфигурацией",
                 reply_markup=builder.as_markup(),
                 disable_web_page_preview=True
             )
@@ -1742,6 +1756,49 @@ def get_user_router() -> Router:
             logger.error(f"Ошибка при формировании ссылки для приложения: {e}")
             try:
                 await callback.message.edit_text("❌ Произошла ошибка при формировании ссылки подключения.")
+            except:
+                pass
+
+    @user_router.callback_query(F.data.startswith("copy_config_"))
+    @registration_required
+    async def copy_config_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        key_id = int(callback.data.split("_")[2])
+        
+        try:
+            key_data = get_key_by_id(key_id)
+            if not key_data:
+                await callback.message.edit_text("❌ Ключ не найден")
+                return
+                
+            details = await xui_api.get_key_details_from_host(key_data)
+            if not details or not details['connection_string']:
+                await callback.message.edit_text("❌ Ошибка на сервере. Не удалось получить данные ключа.")
+                return
+                
+            connection_string = details['connection_string']
+            
+            # Создаем кнопку для копирования
+            builder = InlineKeyboardBuilder()
+            builder.button(text="⬅️ Назад к выбору", callback_data=f"connect_apps_{key_id}")
+            
+            await callback.message.edit_text(
+                f"📋 <b>Конфигурация скопирована</b>\n\n"
+                f"Нажмите на текст ниже и удерживайте для копирования:\n"
+                f"<code>{connection_string}</code>\n\n"
+                f"💡 <b>Как использовать:</b>\n"
+                f"1. Откройте V2Ray приложение\n"
+                f"2. Нажмите '+' или 'Добавить профиль'\n"
+                f"3. Вставьте скопированную конфигурацию\n"
+                f"4. Сохраните и подключитесь",
+                reply_markup=builder.as_markup(),
+                disable_web_page_preview=True
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка при копировании конфигурации: {e}")
+            try:
+                await callback.message.edit_text("❌ Произошла ошибка при копировании конфигурации.")
             except:
                 pass
 
