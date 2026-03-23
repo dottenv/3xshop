@@ -3,67 +3,387 @@
 
 {% block content %}
 <div class="page-header d-print-none">
-  <div class="row align-items-center">
-    <div class="col">
-      <h2 class="page-title">Поддержка</h2>
-      <div class="text-secondary">Список обращений и их статусы</div>
-    </div>
-    <div class="col-auto ms-auto d-print-none">
-      <div class="btn-list">
-        <a class="btn {% if not filter_status %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page') }}">
-          Все ({{ all_count }})
-        </a>
-        <a class="btn {% if filter_status == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='open') }}">
-          Открытые ({{ open_count }})
-        </a>
-        <a class="btn {% if filter_status == 'closed' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='closed') }}">
-          Закрытые ({{ closed_count }})
-        </a>
+  <div class="container-xl">
+    <div class="row align-items-center g-2">
+      <div class="col">
+        <h2 class="page-title">Поддержка</h2>
+        <div class="text-secondary small mt-1 d-none d-sm-block">Список обращений и их статусы</div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <a class="btn {% if not filter_status %}btn-primary{% else %}btn-outline-primary{% endif %} btn-sm" href="{{ url_for('support_list_page') }}">
+            <i class="ti ti-inbox me-1"></i> Все ({{ all_count }})
+          </a>
+          <a class="btn {% if filter_status == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %} btn-sm" href="{{ url_for('support_list_page', status='open') }}">
+            <i class="ti ti-mail-opened me-1"></i> Открытые ({{ open_count }})
+          </a>
+          <a class="btn {% if filter_status == 'closed' %}btn-primary{% else %}btn-outline-primary{% endif %} btn-sm" href="{{ url_for('support_list_page', status='closed') }}">
+            <i class="ti ti-check me-1"></i> Закрытые ({{ closed_count }})
+          </a>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-{% if tickets %}
-<div class="card">
-  <div class="card-body">
-    <div class="table-responsive">
-      <table class="table table-vcenter">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Пользователь</th>
-            <th>Тема</th>
-            <th>Статус</th>
-            <th>Обновлен</th>
-            <th class="w-1">Действия</th>
-          </tr>
-        </thead>
-        <tbody id="support-tbody"
-               data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
-               data-fetch-interval="10000">
-          {% include 'Default/partials/support_table.html' %}
-        </tbody>
-      </table>
-    </div>
-
-    {% if total_pages > 1 %}
-    <div class="d-flex align-items-center justify-content-between mt-2">
-      <div class="text-secondary">Стр. {{ current_page }} из {{ total_pages }}</div>
-      <ul class="pagination m-0">
-        <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
-          <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">Назад</a>
-        </li>
-        <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
-          <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">Вперед</a>
-        </li>
-      </ul>
-    </div>
+<div class="page-body">
+  <div class="container-xl">
+    {% if tickets %}
+      <div class="card support-list-card">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0">Тикеты</h3>
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-secondary small">Сортировка:</span>
+              <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-secondary active" data-sort="status" onclick="sortTickets('status')">
+                  <i class="ti ti-sort me-1"></i> По статусу
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-sort="date" onclick="sortTickets('date')">
+                  <i class="ti ti-calendar me-1"></i> По дате
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="support-table-container">
+            <table class="table support-table table-hover mb-0" id="ticketsTable">
+              <thead>
+                <tr>
+                  <th class="col-status">Статус</th>
+                  <th class="col-id">ID</th>
+                  <th class="col-user">Пользователь</th>
+                  <th class="col-subject">Тема</th>
+                  <th class="col-date">Обновлён</th>
+                </tr>
+              </thead>
+              <tbody id="support-tbody"
+                     data-fetch-url="{{ url_for('support_table_partial', status=filter_status, page=current_page) }}"
+                     data-fetch-interval="10000">
+                {% for t in tickets %}
+                <tr class="ticket-row {% if t.status == 'open' %}ticket-open{% else %}ticket-closed{% endif %}
+                            {% if t.status == 'open' %}table-row-highlight{% endif %}"
+                    data-ticket-id="{{ t.ticket_id }}"
+                    data-status="{{ t.status }}"
+                    data-updated="{{ t.updated_at }}"
+                    data-href="{{ url_for('support_ticket_page', ticket_id=t.ticket_id) }}"
+                    title="Двойной клик для открытия чата">
+                  <td class="col-status">
+                    {% if t.status == 'open' %}
+                      <span class="badge bg-success-lt text-success">
+                        <i class="ti ti-circle-filled" style="font-size: 0.5rem;"></i> Открыт
+                      </span>
+                    {% else %}
+                      <span class="badge bg-secondary-lt text-secondary">
+                        <i class="ti ti-check"></i> Закрыт
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td class="col-id">
+                    <span class="ticket-id">#{{ t.ticket_id }}</span>
+                  </td>
+                  <td class="col-user">
+                    <div class="user-info">
+                      <div class="avatar avatar-xs bg-secondary-lt me-2">
+                        <i class="ti ti-user"></i>
+                      </div>
+                      <span class="user-id">{{ t.user_id }}</span>
+                    </div>
+                  </td>
+                  <td class="col-subject">
+                    <span class="subject-text {% if not t.subject %}text-muted{% endif %}">
+                      {{ t.subject or 'Без темы' }}
+                    </span>
+                  </td>
+                  <td class="col-date">
+                    <span class="date-text" title="{{ t.updated_at }}">{{ t.updated_at }}</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% if total_pages > 1 %}
+        <div class="card-footer">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="text-secondary small">Страница {{ current_page }} из {{ total_pages }}</div>
+            <ul class="pagination pagination-sm m-0">
+              <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page-1) }}">
+                  <i class="ti ti-chevron-left"></i>
+                </a>
+              </li>
+              {% for p in range(1, total_pages + 1) %}
+                {% if p == 1 or p == total_pages or (p >= current_page - 1 and p <= current_page + 1) %}
+                  <li class="page-item {% if p == current_page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=p) }}">{{ p }}</a>
+                  </li>
+                {% elif p == current_page - 2 or p == current_page + 2 %}
+                  <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+              {% endfor %}
+              <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('support_list_page', status=filter_status, page=current_page+1) }}">
+                  <i class="ti ti-chevron-right"></i>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <i class="ti ti-inbox"></i>
+        </div>
+        <h3>Обращений пока нет</h3>
+        <p class="text-secondary">Новые тикеты будут отображаться здесь</p>
+      </div>
     {% endif %}
   </div>
 </div>
-{% else %}
-  <p class="text-secondary">Обращений пока нет.</p>
-{% endif %}
 
+<style>
+  .support-list-card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+
+  .support-list-card .card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--tblr-border-color);
+    padding: 1rem 1.25rem;
+  }
+
+  .support-table-container {
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+  }
+
+  .support-table {
+    font-size: 0.875rem;
+  }
+
+  .support-table thead th {
+    background: var(--tblr-gray-50);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid var(--tblr-border-color);
+    white-space: nowrap;
+  }
+
+  .support-table tbody td {
+    padding: 0.625rem 1rem;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .ticket-row:hover {
+    background-color: var(--tblr-gray-50);
+  }
+
+  .ticket-row.table-row-highlight {
+    background-color: rgba(var(--tblr-success-rgb), 0.04);
+  }
+
+  .ticket-row.table-row-highlight:hover {
+    background-color: rgba(var(--tblr-success-rgb), 0.08);
+  }
+
+  .ticket-row:active {
+    background-color: var(--tblr-gray-100);
+  }
+
+  /* Column widths */
+  .col-status { width: 100px; }
+  .col-id { width: 70px; }
+  .col-user { width: 150px; }
+  .col-subject { min-width: 200px; }
+  .col-date { width: 140px; text-align: right; }
+
+  /* Cell content */
+  .ticket-id {
+    font-family: var(--tblr-font-monospace);
+    font-size: 0.8125rem;
+    color: var(--tblr-secondary);
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+  }
+
+  .user-info .avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+
+  .user-id {
+    font-family: var(--tblr-font-monospace);
+    font-size: 0.8125rem;
+  }
+
+  .subject-text {
+    display: block;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .date-text {
+    font-size: 0.8125rem;
+    color: var(--tblr-secondary);
+    white-space: nowrap;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    font-weight: 500;
+  }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    font-size: 4rem;
+    color: var(--tblr-secondary);
+    opacity: 0.3;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Sort buttons */
+  .btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .support-table-container {
+      max-height: calc(100vh - 200px);
+    }
+
+    .col-subject .subject-text {
+      max-width: 150px;
+    }
+
+    .col-date {
+      display: none;
+    }
+
+    .support-table thead th,
+    .support-table tbody td {
+      padding: 0.5rem 0.75rem;
+    }
+  }
+
+  /* Highlight animation for new tickets */
+  @keyframes highlightNew {
+    from { background-color: rgba(var(--tblr-primary-rgb), 0.2); }
+    to { background-color: transparent; }
+  }
+
+  .ticket-row.new-ticket {
+    animation: highlightNew 2s ease-out;
+  }
+</style>
+
+<script>
+(function() {
+  // Double-click navigation
+  const table = document.getElementById('ticketsTable');
+  if (table) {
+    table.addEventListener('dblclick', function(e) {
+      const row = e.target.closest('.ticket-row');
+      if (row && row.dataset.href) {
+        window.location.href = row.dataset.href;
+      }
+    });
+  }
+
+  // Sorting functionality
+  window.sortTickets = function(sortBy) {
+    const tbody = document.getElementById('support-tbody');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('.ticket-row'));
+    
+    rows.sort(function(a, b) {
+      if (sortBy === 'status') {
+        // Open tickets first, then by date
+        const statusA = a.dataset.status;
+        const statusB = b.dataset.status;
+        if (statusA !== statusB) {
+          return statusA === 'open' ? -1 : 1;
+        }
+        return new Date(b.dataset.updated) - new Date(a.dataset.updated);
+      } else if (sortBy === 'date') {
+        // Newest first
+        return new Date(b.dataset.updated) - new Date(a.dataset.updated);
+      }
+      return 0;
+    });
+
+    // Re-append sorted rows
+    rows.forEach(function(row) {
+      tbody.appendChild(row);
+    });
+
+    // Update active button
+    document.querySelectorAll('[data-sort]').forEach(function(btn) {
+      btn.classList.remove('active');
+      if (btn.dataset.sort === sortBy) {
+        btn.classList.add('active');
+      }
+    });
+
+    // Store preference
+    localStorage.setItem('support_sort_preference', sortBy);
+  };
+
+  // Restore sort preference on load
+  const savedSort = localStorage.getItem('support_sort_preference');
+  if (savedSort) {
+    sortTickets(savedSort);
+  }
+
+  // Optional: Single click shows preview or highlights row
+  if (table) {
+    table.addEventListener('click', function(e) {
+      const row = e.target.closest('.ticket-row');
+      if (row) {
+        // Remove previous selection
+        table.querySelectorAll('.ticket-row').forEach(function(r) {
+          r.classList.remove('selected');
+        });
+        // Add selection to clicked row
+        row.classList.add('selected');
+      }
+    });
+  }
+})();
+</script>
 {% endblock %}

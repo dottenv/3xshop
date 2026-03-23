@@ -1,0 +1,640 @@
+{% extends 'Default/base.html' %}
+{% block title %}Тикет #{{ ticket.ticket_id }} — Поддержка{% endblock %}
+
+{% block content %}
+<div class="chat-layout" id="ticket-root" data-ticket-id="{{ ticket.ticket_id }}">
+  <!-- Шапка чата -->
+  <div class="chat-header">
+    <div class="chat-header-info">
+      <a href="{{ url_for('support_list_page') }}" class="btn btn-icon btn-ghost-secondary btn-sm back-btn">
+        <i class="ti ti-arrow-left"></i>
+      </a>
+      <div class="chat-header-avatar">
+        <div class="avatar avatar-md bg-primary-lt">
+          <i class="ti ti-user"></i>
+        </div>
+      </div>
+      <div class="chat-header-details">
+        <h3 class="chat-header-title">Тикет #{{ ticket.ticket_id }}</h3>
+        <div class="chat-header-meta">
+          <span class="user-id">Пользователь: {{ ticket.user_id }}</span>
+          <span class="separator">•</span>
+          <span class="subject">{{ ticket.subject or 'Без темы' }}</span>
+          <span class="separator">•</span>
+          <span id="ticket-status-badge" class="badge {% if ticket.status == 'open' %}bg-success{% else %}bg-secondary{% endif %}">
+            {% if ticket.status == 'open' %}Открыт{% else %}Закрыт{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="chat-header-actions">
+      <button type="button" class="btn btn-icon btn-ghost-secondary" id="refresh-chat" title="Обновить">
+        <i class="ti ti-refresh"></i>
+      </button>
+      <form method="post" action="{{ url_for('delete_support_ticket_route', ticket_id=ticket.ticket_id) }}" 
+            onsubmit="return confirm('Удалить тикет #{{ ticket.ticket_id }}? Это действие необратимо.');"
+            class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-icon btn-ghost-danger" title="Удалить тикет">
+          <i class="ti ti-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Область сообщений -->
+  <div class="chat-messages" id="chat-messages">
+    {% if messages %}
+      {% for m in messages %}
+        <div class="message {% if m.sender == 'admin' %}message-out{% else %}message-in{% endif %}" data-message-id="{{ m.message_id }}">
+          <div class="message-avatar">
+            <div class="avatar avatar-sm {% if m.sender == 'admin' %}bg-primary{% else %}bg-secondary{% endif %}">
+              <i class="ti ti-{{ 'headset' if m.sender == 'admin' else 'user' }}"></i>
+            </div>
+          </div>
+          <div class="message-content">
+            <div class="message-bubble">
+              <div class="message-text">{{ m.content }}</div>
+              <div class="message-time">{{ m.created_at }}</div>
+            </div>
+            <div class="message-sender">{{ 'Админ' if m.sender == 'admin' else 'Пользователь' }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="chat-empty">
+        <div class="chat-empty-icon">
+          <i class="ti ti-messages"></i>
+        </div>
+        <p>Сообщений пока нет.<br>Начните диалог первым сообщением.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Область ввода -->
+  <div class="chat-input-area {% if ticket.status == 'closed' %}chat-input-disabled{% endif %}">
+    <form method="post" id="reply-form" class="chat-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      
+      {% if ticket.status == 'closed' %}
+        <div class="chat-closed-notice">
+          <i class="ti ti-lock"></i>
+          <span>Тикет закрыт. Чтобы отправлять сообщения, откройте тикет.</span>
+          <button type="submit" name="action" value="open" class="btn btn-success btn-sm">
+            <i class="ti ti-lock-open me-1"></i> Открыть тикет
+          </button>
+        </div>
+      {% else %}
+        <div class="chat-input-wrapper">
+          <textarea 
+            id="reply-text" 
+            name="message" 
+            class="chat-textarea" 
+            placeholder="Введите сообщение..." 
+            rows="1"
+            maxlength="4000"
+          ></textarea>
+          <div class="chat-input-actions">
+            <button type="submit" name="action" value="reply" class="btn btn-primary btn-icon btn-send" id="reply-btn">
+              <i class="ti ti-send"></i>
+            </button>
+          </div>
+        </div>
+        <div class="chat-toolbar">
+          <div class="chat-toolbar-left">
+            <span class="char-count" id="char-count">0/4000</span>
+          </div>
+          <div class="chat-toolbar-right">
+            <button type="submit" name="action" value="close" class="btn btn-outline-danger btn-sm" id="close-ticket-btn">
+              <i class="ti ti-lock me-1"></i> Закрыть тикет
+            </button>
+          </div>
+        </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<style>
+  /* Полноэкранный чат лейаут */
+  .chat-layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 70px); /* Вычитаем высоту навбара */
+    min-height: 500px;
+    background: var(--bg-surface);
+    border-radius: var(--tblr-border-radius-lg);
+    overflow: hidden;
+  }
+
+  /* Шапка чата */
+  .chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--tblr-border-color);
+    flex-shrink: 0;
+  }
+
+  .chat-header-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .back-btn {
+    flex-shrink: 0;
+  }
+
+  .chat-header-avatar {
+    flex-shrink: 0;
+  }
+
+  .chat-header-avatar .avatar {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .chat-header-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .chat-header-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .chat-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--tblr-secondary);
+    flex-wrap: wrap;
+  }
+
+  .chat-header-meta .separator {
+    opacity: 0.5;
+  }
+
+  .chat-header-meta .user-id {
+    font-family: var(--tblr-font-monospace);
+    font-size: 0.8125rem;
+  }
+
+  .chat-header-meta .subject {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  /* Область сообщений */
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background: var(--tblr-body-bg);
+    background-image: 
+      radial-gradient(circle at 20% 50%, rgba(120, 120, 120, 0.02) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(120, 120, 120, 0.02) 0%, transparent 50%);
+  }
+
+  .chat-messages::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .chat-messages::-webkit-scrollbar-thumb {
+    background: var(--tblr-border-color);
+    border-radius: 4px;
+  }
+
+  .chat-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--tblr-secondary);
+  }
+
+  /* Пустое состояние */
+  .chat-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--tblr-secondary);
+    text-align: center;
+  }
+
+  .chat-empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+  }
+
+  .chat-empty p {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+
+  /* Сообщения */
+  .message {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    max-width: 85%;
+    animation: messageSlide 0.2s ease-out;
+  }
+
+  @keyframes messageSlide {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .message-in {
+    align-self: flex-start;
+  }
+
+  .message-out {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .message-avatar {
+    flex-shrink: 0;
+  }
+
+  .message-avatar .avatar {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: white;
+  }
+
+  .message-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-width: calc(100% - 48px);
+  }
+
+  .message-out .message-content {
+    align-items: flex-end;
+  }
+
+  .message-in .message-content {
+    align-items: flex-start;
+  }
+
+  .message-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    position: relative;
+    word-break: break-word;
+    line-height: 1.5;
+  }
+
+  .message-in .message-bubble {
+    background: var(--bg-card);
+    border: 1px solid var(--tblr-border-color);
+    border-top-left-radius: 0.25rem;
+  }
+
+  .message-out .message-bubble {
+    background: var(--tblr-primary);
+    color: white;
+    border-top-right-radius: 0.25rem;
+  }
+
+  .message-text {
+    font-size: 0.9375rem;
+  }
+
+  .message-time {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    opacity: 0.7;
+  }
+
+  .message-sender {
+    font-size: 0.75rem;
+    color: var(--tblr-secondary);
+    padding: 0 0.25rem;
+  }
+
+  /* Область ввода */
+  .chat-input-area {
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border-top: 1px solid var(--tblr-border-color);
+    padding: 1rem 1.5rem;
+  }
+
+  .chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .chat-input-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
+
+  .chat-textarea {
+    flex: 1;
+    border: 1px solid var(--tblr-border-color);
+    border-radius: 1.25rem;
+    padding: 0.75rem 1rem;
+    background: var(--tblr-body-bg);
+    color: var(--tblr-body-color);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    resize: none;
+    min-height: 48px;
+    max-height: 150px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .chat-textarea:focus {
+    outline: none;
+    border-color: var(--tblr-primary);
+    box-shadow: 0 0 0 3px rgba(var(--tblr-primary-rgb), 0.1);
+  }
+
+  .chat-textarea::placeholder {
+    color: var(--tblr-secondary);
+  }
+
+  .chat-input-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-send {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    padding: 0;
+  }
+
+  .btn-send:hover {
+    transform: scale(1.05);
+  }
+
+  .btn-send:active {
+    transform: scale(0.95);
+  }
+
+  /* Тулбар */
+  .chat-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.5rem;
+  }
+
+  .char-count {
+    font-size: 0.75rem;
+    color: var(--tblr-secondary);
+  }
+
+  /* Закрытый тикет */
+  .chat-input-disabled {
+    background: var(--tblr-gray-100);
+  }
+
+  .chat-closed-notice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--tblr-gray-100);
+    border-radius: var(--tblr-border-radius-lg);
+    color: var(--tblr-secondary);
+    flex-wrap: wrap;
+  }
+
+  .chat-closed-notice i {
+    font-size: 1.25rem;
+  }
+
+  /* Адаптивность */
+  @media (max-width: 768px) {
+    .chat-layout {
+      height: calc(100vh - 60px);
+      border-radius: 0;
+    }
+
+    .chat-header {
+      padding: 0.75rem 1rem;
+    }
+
+    .chat-header-avatar .avatar {
+      width: 40px;
+      height: 40px;
+      font-size: 1.25rem;
+    }
+
+    .chat-header-title {
+      font-size: 1rem;
+    }
+
+    .chat-header-meta {
+      font-size: 0.75rem;
+    }
+
+    .chat-header-meta .subject {
+      max-width: 120px;
+    }
+
+    .chat-messages {
+      padding: 1rem;
+    }
+
+    .message {
+      max-width: 95%;
+      margin-bottom: 1rem;
+    }
+
+    .chat-input-area {
+      padding: 0.75rem 1rem;
+    }
+
+    .chat-textarea {
+      min-height: 44px;
+      padding: 0.625rem 0.875rem;
+    }
+
+    .btn-send {
+      width: 44px;
+      height: 44px;
+    }
+  }
+
+  /* Автоскролл к последнему сообщению */
+  .chat-messages {
+    scroll-behavior: smooth;
+  }
+
+  /* Индикатор набора текста (опционально) */
+  .typing-indicator {
+    display: none;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    color: var(--tblr-secondary);
+  }
+
+  .typing-indicator.visible {
+    display: flex;
+  }
+
+  .typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background: var(--tblr-secondary);
+    border-radius: 50%;
+    animation: typingBounce 1.4s infinite ease-in-out both;
+  }
+
+  .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+  .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+  @keyframes typingBounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+</style>
+
+<script>
+(function() {
+  const chatMessages = document.getElementById('chat-messages');
+  const replyText = document.getElementById('reply-text');
+  const replyForm = document.getElementById('reply-form');
+  const charCount = document.getElementById('char-count');
+  const refreshBtn = document.getElementById('refresh-chat');
+
+  // Автоскролл к последнему сообщению
+  function scrollToBottom() {
+    if (chatMessages) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+  scrollToBottom();
+
+  // Авторасширение textarea
+  if (replyText) {
+    replyText.addEventListener('input', function() {
+      // Обновление счетчика символов
+      if (charCount) {
+        charCount.textContent = this.value.length + '/4000';
+      }
+
+      // Авторасширение
+      this.style.height = 'auto';
+      const newHeight = Math.min(this.scrollHeight, 150);
+      this.style.height = newHeight + 'px';
+    });
+
+    // Отправка по Ctrl+Enter
+    replyText.addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        if (this.value.trim()) {
+          replyForm.submit();
+        }
+      }
+    });
+  }
+
+  // Фокус на поле ввода при загрузке
+  if (replyText && !replyText.disabled) {
+    setTimeout(() => replyText.focus(), 100);
+  }
+
+  // Кнопка обновления
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function() {
+      location.reload();
+    });
+  }
+
+  // Предотвращение случайной отправки пустого сообщения
+  if (replyForm) {
+    replyForm.addEventListener('submit', function(e) {
+      const text = replyText ? replyText.value.trim() : '';
+      const action = e.submitter ? e.submitter.value : '';
+      
+      if (action === 'reply' && !text) {
+        e.preventDefault();
+        if (replyText) replyText.focus();
+      }
+    });
+  }
+
+  // Автообновление каждые 10 секунд (опционально)
+  // Раскомментируйте если нужно автообновление без перезагрузки
+  /*
+  setInterval(function() {
+    fetch(window.location.href, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const newMessages = doc.getElementById('chat-messages');
+      if (newMessages && chatMessages) {
+        const oldScrollTop = chatMessages.scrollTop;
+        const oldScrollHeight = chatMessages.scrollHeight;
+        chatMessages.innerHTML = newMessages.innerHTML;
+        // Скролл только если пользователь был внизу
+        if (oldScrollTop + chatMessages.clientHeight >= oldScrollHeight - 50) {
+          scrollToBottom();
+        }
+      }
+    })
+    .catch(console.error);
+  }, 10000);
+  */
+})();
+</script>
+{% endblock %}
