@@ -1,28 +1,31 @@
-{% for t in transactions %}
+{% for tx in transactions %}
 <tr>
-    <td>
+    <td class="py-1">
         <div class="d-flex align-items-center">
-            <div class="avatar avatar-sm bg-primary-lt me-2">
-                <i class="bi bi-person"></i>
+            <div class="flex-grow-1">
+                <div class="fw-semibold text-truncate" style="max-width: 140px;" title="{{ tx.username or 'N/A' }}">
+                    {{ tx.username or 'N/A' }}
+                </div>
+                <div class="text-muted small text-truncate" style="max-width: 140px;">
+                    {{ tx.user_id }}
+                </div>
             </div>
-            <span class="user-id">{{ t.user_id }}</span>
         </div>
     </td>
-    <td class="text-center">
-        <span class="badge bg-secondary">{{ t.plan or '—' }}</span>
+    <td class="py-1 text-center">
+        <span class="badge bg-primary-subtle text-primary fw-medium">
+            {{ tx.plan_name }}
+        </span>
     </td>
-    <td>
-        <span class="fw-semibold text-success">{{ t.amount }}₽</span>
+    <td class="py-1">
+        <div class="fw-bold text-nowrap">
+            {{ tx.amount_rub | round(1) }} <small>₽</small>
+        </div>
     </td>
-    <td>
-        <span class="text-muted small">{{ t.created_at }}</span>
-    </td>
-</tr>
-{% else %}
-<tr>
-    <td colspan="4" class="text-center p-4">
-        <i class="bi bi-inbox fs-1 text-muted mb-2"></i>
-        <p class="text-muted mb-0">Транзакций не найдено.</p>
+    <td class="py-1">
+        <div class="text-muted small">
+            {{ tx.created_date.split(' ')[0] }}
+        </div>
     </td>
 </tr>
 {% endfor %}
