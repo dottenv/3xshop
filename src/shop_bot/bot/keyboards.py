@@ -851,12 +851,13 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
 
 def create_key_info_keyboard(key_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    builder.button(text="⬇️ Скачать приложение", callback_data=f"download_apps_{key_id}")
+    builder.button(text="🔗 Подключиться", callback_data=f"connect_apps_{key_id}")
     builder.button(text=(get_setting("btn_extend_key") or "➕ Продлить этот ключ"), callback_data=f"extend_key_{key_id}")
-    builder.button(text=(get_setting("btn_show_qr") or "📱 Показать QR-код"), callback_data=f"show_qr_{key_id}")
-    builder.button(text=(get_setting("btn_instruction") or "📖 Инструкция"), callback_data=f"howto_vless_{key_id}")
+    builder.button(text=(get_setting("btn_show_qr") or "� Показать QR-код"), callback_data=f"show_qr_{key_id}")
     builder.button(text=(get_setting("btn_switch_server") or "🌍 Сменить сервер"), callback_data=f"switch_server_{key_id}")
     builder.button(text=(get_setting("btn_back_to_keys") or "⬅️ Назад к списку ключей"), callback_data="manage_keys")
-    builder.adjust(1)
+    builder.adjust(2, 2, 2)
     return builder.as_markup()
 
 def create_howto_vless_keyboard() -> InlineKeyboardMarkup:
@@ -877,6 +878,36 @@ def create_howto_vless_keyboard_key(key_id: int) -> InlineKeyboardMarkup:
     builder.button(text=(get_setting("btn_howto_linux") or "🐧 Linux"), callback_data="howto_linux")
     builder.button(text=(get_setting("btn_back_to_key") or "⬅️ Назад к ключу"), callback_data=f"show_key_{key_id}")
     builder.adjust(2, 2, 1)
+    return builder.as_markup()
+
+def create_download_apps_keyboard(key_id: int) -> InlineKeyboardMarkup:
+    """Клавиатура для выбора приложений для скачивания"""
+    builder = InlineKeyboardBuilder()
+    # V2Ray приложения
+    builder.button(text="📱 V2RayNG (Android)", url="https://play.google.com/store/apps/details?id=com.v2ray.ang")
+    builder.button(text="🍎 V2Box (iOS)", url="https://apps.apple.com/us/app/v2box-v2ray-client/id6446814690")
+    # Happ приложения
+    builder.button(text="📱 Happ (Android)", url="https://play.google.com/store/apps/details?id=com.happproxy")
+    builder.button(text="🍎 Happ (iOS)", url="https://apps.apple.com/us/app/happ-proxy-utility/id6504287215")
+    # Desktop приложения
+    builder.button(text="💻 Happ (Windows)", url="https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe")
+    builder.button(text="💻 V2RayN (Windows)", url="https://github.com/2dust/v2rayN/releases")
+    builder.button(text="🐧 Happ (Linux)", url="https://github.com/Happ-proxy/happ-desktop/releases/latest/download/Happ.linux.x64.pkg.tar.zst")
+    builder.button(text="🍎 Happ (macOS)", url="https://github.com/Happ-proxy/happ-desktop/releases/latest/download/Happ.macOS.universal.dmg")
+    builder.button(text=(get_setting("btn_back_to_key") or "⬅️ Назад к ключу"), callback_data=f"show_key_{key_id}")
+    builder.adjust(2, 2, 2, 2, 1)
+    return builder.as_markup()
+
+def create_connect_apps_keyboard(key_id: int) -> InlineKeyboardMarkup:
+    """Клавиатура для выбора установленного приложения для подключения"""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="📱 V2RayNG", callback_data=f"connect_v2rayng_{key_id}")
+    builder.button(text="📱 Happ", callback_data=f"connect_happ_{key_id}")
+    builder.button(text="🍎 V2Box", callback_data=f"connect_v2box_{key_id}")
+    builder.button(text="💻 V2RayN", callback_data=f"connect_v2rayn_{key_id}")
+    builder.button(text="💻 Happ Desktop", callback_data=f"connect_happ_desktop_{key_id}")
+    builder.button(text=(get_setting("btn_back_to_key") or "⬅️ Назад к ключу"), callback_data=f"show_key_{key_id}")
+    builder.adjust(2, 2, 2, 1)
     return builder.as_markup()
 
 def create_back_to_menu_keyboard() -> InlineKeyboardMarkup:

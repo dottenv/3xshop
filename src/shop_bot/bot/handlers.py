@@ -1604,6 +1604,146 @@ def get_user_router() -> Router:
         except TelegramBadRequest:
             pass
 
+    @user_router.callback_query(F.data.startswith("download_apps_"))
+    @registration_required
+    async def download_apps_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        key_id = int(callback.data.split("_")[2])
+        try:
+            await callback.message.edit_text(
+                "⬇️ <b>Выберите приложение для скачивания:</b>\n\n"
+                "Рекомендуем использовать приложения <b>V2RayNG</b> для Android и <b>Happ</b> для iOS/PC",
+                reply_markup=keyboards.create_download_apps_keyboard(key_id),
+                disable_web_page_preview=True
+            )
+        except TelegramBadRequest:
+            pass
+
+    @user_router.callback_query(F.data.startswith("connect_apps_"))
+    @registration_required
+    async def connect_apps_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        key_id = int(callback.data.split("_")[2])
+        
+        try:
+            # Получаем данные ключа для формирования ссылки подключения
+            key_data = get_key_by_id(key_id)
+            if not key_data:
+                await callback.message.edit_text("❌ Ключ не найден")
+                return
+                
+            details = await xui_api.get_key_details_from_host(key_data)
+            if not details or not details['connection_string']:
+                await callback.message.edit_text("❌ Ошибка на сервере. Не удалось получить данные ключа.")
+                return
+                
+            connection_string = details['connection_string']
+            
+            await callback.message.edit_text(
+                "🔗 <b>Выберите установленное приложение:</b>\n\n"
+                "После выбора приложения будет сформирована ссылка для автоматического подключения",
+                reply_markup=keyboards.create_connect_apps_keyboard(key_id),
+                disable_web_page_preview=True
+            )
+        except Exception as e:
+            logger.error(f"Ошибка в обработчике connect_apps: {e}")
+            try:
+                await callback.message.edit_text("❌ Произошла ошибка. Попробуйте еще раз.")
+            except:
+                pass
+
+    @user_router.callback_query(F.data.startswith("connect_v2rayng_"))
+    @registration_required
+    async def connect_v2rayng_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        key_id = int(callback.data.split("_")[2])
+        await handle_app_connection(callback, key_id, "v2rayng://")
+
+    @user_router.callback_query(F.data.startswith("connect_happ_"))
+    @registration_required
+    async def connect_happ_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        key_id = int(callback.data.split("_")[2])
+        await handle_app_connection(callback, key_id, "happ://")
+
+    @user_router.callback_query(F.data.startswith("connect_v2box_"))
+    @registration_required
+    async def connect_v2box_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        key_id = int(callback.data.split("_")[2])
+        await handle_app_connection(callback, key_id, "v2box://")
+
+    @user_router.callback_query(F.data.startswith("connect_v2rayn_"))
+    @registration_required
+    async def connect_v2rayn_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        key_id = int(callback.data.split("_")[2])
+        await handle_app_connection(callback, key_id, "v2rayn://")
+
+    @user_router.callback_query(F.data.startswith("connect_happ_desktop_"))
+    @registration_required
+    async def connect_happ_desktop_handler(callback: types.CallbackQuery):
+        await callback.answer()
+        key_id = int(callback.data.split("_")[2])
+        await handle_app_connection(callback, key_id, "happ-desktop://")
+
+    async def handle_app_connection(callback: types.CallbackQuery, key_id: int, app_scheme: str):
+        """Обработчик формирования ссылки для подключения к приложению"""
+        try:
+            key_data = get_key_by_id(key_id)
+            if not key_data:
+                await callback.message.edit_text("❌ Ключ не найден")
+                return
+                
+            details = await xui_api.get_key_details_from_host(key_data)
+            if not details or not details['connection_string']:
+                await callback.message.edit_text("❌ Ошибка на сервере. Не удалось получить данные ключа.")
+                return
+                
+            connection_string = details['connection_string']
+            
+            # Формируем ссылку для приложения
+            if app_scheme in ["v2rayng://", "happ://"]:
+                # Для мобильных приложений используем прямую ссылку на конфигурацию
+                app_link = f"{app_scheme}{connection_string}"
+            elif app_scheme in ["v2box://", "v2rayn://", "happ-desktop://"]:
+                # Для десктопных приложений может потребоваться другой формат
+                app_link = f"{app_scheme}{connection_string}"
+            else:
+                app_link = connection_string
+            
+            # Создаем кнопку с ссылкой
+            builder = InlineKeyboardBuilder()
+            builder.button(text="🔗 Открыть в приложении", url=app_link)
+            builder.button(text="⬅️ Назад к выбору", callback_data=f"connect_apps_{key_id}")
+            builder.adjust(1)
+            
+            app_names = {
+                "v2rayng://": "V2RayNG",
+                "happ://": "Happ",
+                "v2box://": "V2Box", 
+                "v2rayn://": "V2RayN",
+                "happ-desktop://": "Happ Desktop"
+            }
+            
+            app_name = app_names.get(app_scheme, "приложение")
+            
+            await callback.message.edit_text(
+                f"🔗 <b>Подключение через {app_name}</b>\n\n"
+                f"Нажмите на кнопку ниже, чтобы открыть конфигурацию в приложении:\n"
+                f"<code>{app_link}</code>\n\n"
+                f"Если ссылка не работает, скопируйте конфигурацию вручную:\n"
+                f"<code>{connection_string}</code>",
+                reply_markup=builder.as_markup(),
+                disable_web_page_preview=True
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка при формировании ссылки для приложения: {e}")
+            try:
+                await callback.message.edit_text("❌ Произошла ошибка при формировании ссылки подключения.")
+            except:
+                pass
 
     @user_router.callback_query(F.data == "howto_android")
     @registration_required
