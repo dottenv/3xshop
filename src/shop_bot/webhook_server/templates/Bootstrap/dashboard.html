@@ -31,21 +31,17 @@
                 </div>
                 <div class="card-body">
                     <div class="row align-items-center mb-3 gy-2">
-                        <div class="col-md-6">
-                            <label class="form-label mb-1 small">Хост для мониторинга</label>
-                            <div class="soft-select" id="st_host_softselect" data-target="st-host">
-                                <button type="button" class="soft-select-toggle" id="st_host_toggle">Выберите хост...</button>
-                                <div class="soft-select-menu" id="st_host_menu"></div>
-                                <select id="st-host" class="form-select form-select-sm">
-                                    {% for h in hosts %}
-                                    <option value="{{ h.host_name }}">{{ h.host_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                        <div class="col-md-5">
+                            <label class="form-label mb-1 small" for="st-host">Хост для мониторинга</label>
+                            <select id="st-host" class="form-select form-select-sm">
+                                {% for h in hosts %}
+                                <option value="{{ h.host_name }}">{{ h.host_name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-5">
                             <div class="small text-muted mb-1">Последний результат</div>
-                            <div id="st-latest" class="small text-truncate">—</div>
+                            <div id="st-latest" class="small text-truncate text-muted">—</div>
                         </div>
                         <div class="col-md-2 text-md-end">
                             <div class="d-flex d-md-inline-flex gap-2 justify-content-end">
@@ -224,86 +220,8 @@
 
     <script>
         const CHART_DATA = JSON.parse(document.getElementById('chart-data').textContent);
-        
+
         document.addEventListener('DOMContentLoaded', async () => {
-            // Soft-select functionality
-            function buildSoftSelect(selectEl, toggleEl, menuEl, placeholder) {
-                if (!selectEl || !toggleEl || !menuEl) return;
-                
-                // Render items
-                menuEl.innerHTML = '';
-                const opts = Array.from(selectEl.options || []);
-                opts.forEach(opt => {
-                    const div = document.createElement('div');
-                    div.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
-                    div.dataset.value = opt.value;
-                    div.innerHTML = `<span>${opt.textContent || ''}</span>`;
-                    div.addEventListener('click', () => {
-                        selectEl.value = opt.value;
-                        menuEl.querySelectorAll('.soft-select-item').forEach(el => el.classList.remove('is-active'));
-                        div.classList.add('is-active');
-                        toggleEl.textContent = opt.textContent || placeholder || '';
-                        toggleEl.closest('.soft-select')?.classList.remove('open');
-                        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-                    });
-                    menuEl.appendChild(div);
-                });
-                
-                const selOpt = opts.find(o => o.selected) || opts[0];
-                toggleEl.textContent = (selOpt && selOpt.textContent) || placeholder || '';
-                const wrap = toggleEl.closest('.soft-select');
-                
-                function placeMenu() {
-                    const r = toggleEl.getBoundingClientRect();
-                    menuEl.style.position = 'fixed';
-                    menuEl.style.left = `${Math.round(r.left)}px`;
-                    menuEl.style.top = `${Math.round(r.bottom + 6)}px`;
-                    menuEl.style.width = `${Math.round(r.width)}px`;
-                    menuEl.style.zIndex = '1065';
-                }
-                
-                function openMenu() {
-                    if (menuEl.parentElement !== document.body) document.body.appendChild(menuEl);
-                    placeMenu();
-                    wrap.classList.add('open');
-                    menuEl.style.display = 'block';
-                    window.addEventListener('scroll', placeMenu, true);
-                    window.addEventListener('resize', placeMenu, true);
-                }
-                
-                function closeMenu() {
-                    wrap.classList.remove('open');
-                    menuEl.style.display = 'none';
-                    if (menuEl.parentElement === document.body) wrap.appendChild(menuEl);
-                    window.removeEventListener('scroll', placeMenu, true);
-                    window.removeEventListener('resize', placeMenu, true);
-                }
-                
-                toggleEl.onclick = (e) => { 
-                    e.stopPropagation(); 
-                    if (wrap.classList.contains('open')) closeMenu(); 
-                    else openMenu(); 
-                };
-                
-                document.addEventListener('click', (e) => { 
-                    if (!wrap.contains(e.target)) closeMenu(); 
-                });
-                
-                document.addEventListener('keydown', (e) => { 
-                    if (e.key === 'Escape') closeMenu(); 
-                });
-            }
-            
-            function initSoftSelect(selectId, placeholder) {
-                const sel = document.getElementById(selectId);
-                const wrap = document.querySelector(`.soft-select[data-target="${selectId}"]`);
-                if (!sel || !wrap) return;
-                const toggle = wrap.querySelector('.soft-select-toggle');
-                const menu = wrap.querySelector('.soft-select-menu');
-                buildSoftSelect(sel, toggle, menu, placeholder);
-                sel.addEventListener('change', () => buildSoftSelect(sel, toggle, menu, placeholder));
-            }
-            
             // Speedtest functionality
             const hostSelect = document.getElementById('st-host');
             const latestBox = document.getElementById('st-latest');

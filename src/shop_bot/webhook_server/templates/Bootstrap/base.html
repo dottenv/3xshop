@@ -210,64 +210,6 @@
             height: 300px;
         }
         
-        .soft-select {
-            position: relative;
-        }
-        
-        .soft-select-toggle {
-            background: white;
-            border: 1px solid #ced4da;
-            border-radius: 0.375rem;
-            padding: 0.5rem 0.75rem;
-            width: 100%;
-            text-align: left;
-            cursor: pointer;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-        
-        .soft-select-toggle:hover {
-            border-color: var(--bs-primary);
-        }
-        
-        .soft-select.open .soft-select-toggle {
-            border-color: var(--bs-primary);
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-        }
-        
-        .soft-select-menu {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 0.375rem;
-            margin-top: 0.25rem;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
-        
-        .soft-select.open .soft-select-menu {
-            display: block;
-        }
-        
-        .soft-select-item {
-            padding: 0.5rem 0.75rem;
-            cursor: pointer;
-            transition: background-color 0.15s ease;
-        }
-        
-        .soft-select-item:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .soft-select-item.is-active {
-            background-color: rgba(102, 126, 234, 0.1);
-            color: var(--bs-primary);
-        }
-        
         .pagination .page-link {
             border: 1px solid #dee2e6;
             color: var(--bs-primary);
@@ -312,69 +254,162 @@
     </style>
     
     {% block extra_css %}{% endblock %}
+    </style>
+    
+    {% block extra_css %}{% endblock %}
 </head>
 <body data-page="{{ request.endpoint }}">
-    <div class="d-flex min-vh-100">
-        <nav class="border-end bg-white d-flex flex-column" style="width: 260px;">
-            <div class="px-3 py-3 border-bottom d-flex align-items-center">
-                <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard_page') }}">
-                    <i class="bi bi-speedometer2 me-2"></i>
-                    <span>{{ brand_title or '3XUI Shop Bot' }}</span>
-                </a>
-            </div>
-            <div class="flex-grow-1 d-flex flex-column">
-                <ul class="nav nav-pills flex-column px-2 py-3">
-                    <li class="nav-item mb-1">
-                        <a class="nav-link d-flex align-items-center {% if request.endpoint == 'dashboard_page' %}active{% endif %}" href="{{ url_for('dashboard_page') }}">
-                            <i class="bi bi-house me-2"></i><span>Главная</span>
-                        </a>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard_page') }}">
+                <i class="bi bi-speedometer2 me-2"></i>
+                <span>{{ brand_title or '3XUI Shop Bot' }}</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse d-none d-lg-flex">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item d-flex align-items-center me-3">
+                        {% if bot_status.is_running %}
+                        <span class="badge bg-success">Бот запущен</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Бот остановлен</span>
+                        {% endif %}
                     </li>
-                    <li class="nav-item mb-1">
-                        <a class="nav-link d-flex align-items-center {% if request.endpoint == 'users_page' %}active{% endif %}" href="{{ url_for('users_page') }}">
-                            <i class="bi bi-people me-2"></i><span>Пользователи</span>
-                        </a>
-                    </li>
-                    <li class="nav-item mb-1">
-                        <a class="nav-link d-flex align-items-center {% if request.endpoint == 'admin_keys_page' %}active{% endif %}" href="{{ url_for('admin_keys_page') }}">
-                            <i class="bi bi-key me-2"></i><span>Ключи</span>
-                        </a>
-                    </li>
-                    <li class="nav-item mb-1">
-                        <a class="nav-link d-flex align-items-center {% if request.endpoint in ['support_list_page', 'support_ticket_page'] %}active{% endif %}" href="{{ url_for('support_list_page') }}">
-                            <i class="bi bi-headset me-2"></i><span>Поддержка</span>
-                            {% if open_tickets_count and open_tickets_count > 0 %}
-                            <span class="badge bg-danger ms-auto">{{ open_tickets_count }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    <li class="nav-item mb-1">
-                        <a class="nav-link d-flex align-items-center {% if request.endpoint == 'monitor_page' %}active{% endif %}" href="{{ url_for('monitor_page') }}">
-                            <i class="bi bi-activity me-2"></i><span>Монитор</span>
-                        </a>
-                    </li>
-                    <li class="nav-item mb-1">
-                        <a class="nav-link d-flex align-items-center {% if request.endpoint == 'button_constructor_page' %}active{% endif %}" href="{{ url_for('button_constructor_page') }}">
-                            <i class="bi bi-grid-3x3-gap me-2"></i><span>Конструктор</span>
-                        </a>
-                    </li>
-                    <li class="nav-item mb-1">
-                        <a class="nav-link d-flex align-items-center {% if request.endpoint == 'settings_page' %}active{% endif %}" href="{{ url_for('settings_page') }}">
-                            <i class="bi bi-gear me-2"></i><span>Настройки</span>
-                        </a>
+                    <li class="nav-item">
+                        <form action="{{ url_for('logout_page') }}" method="post" class="m-0">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-box-arrow-right me-1"></i>Выход
+                            </button>
+                        </form>
                     </li>
                 </ul>
-                <div class="mt-auto px-3 py-3 border-top">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="small text-muted">Бот</div>
-                        <div>
-                            {% if bot_status.is_running %}
-                            <span class="badge bg-success">Запущен</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Остановлен</span>
-                            {% endif %}
-                        </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="sidebarOffcanvasLabel">{{ brand_title or '3XUI Shop Bot' }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column">
+            <ul class="nav nav-pills flex-column mb-3">
+                <li class="nav-item mb-1">
+                    <a class="nav-link d-flex align-items-center {% if request.endpoint == 'dashboard_page' %}active{% endif %}" href="{{ url_for('dashboard_page') }}">
+                        <i class="bi bi-house me-2"></i><span>Главная</span>
+                    </a>
+                </li>
+                <li class="nav-item mb-1">
+                    <a class="nav-link d-flex align-items-center {% if request.endpoint == 'users_page' %}active{% endif %}" href="{{ url_for('users_page') }}">
+                        <i class="bi bi-people me-2"></i><span>Пользователи</span>
+                    </a>
+                </li>
+                <li class="nav-item mb-1">
+                    <a class="nav-link d-flex align-items-center {% if request.endpoint == 'admin_keys_page' %}active{% endif %}" href="{{ url_for('admin_keys_page') }}">
+                        <i class="bi bi-key me-2"></i><span>Ключи</span>
+                    </a>
+                </li>
+                <li class="nav-item mb-1">
+                    <a class="nav-link d-flex align-items-center {% if request.endpoint in ['support_list_page', 'support_ticket_page'] %}active{% endif %}" href="{{ url_for('support_list_page') }}">
+                        <i class="bi bi-headset me-2"></i><span>Поддержка</span>
+                        {% if open_tickets_count and open_tickets_count > 0 %}
+                        <span class="badge bg-danger ms-auto">{{ open_tickets_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="nav-item mb-1">
+                    <a class="nav-link d-flex align-items-center {% if request.endpoint == 'monitor_page' %}active{% endif %}" href="{{ url_for('monitor_page') }}">
+                        <i class="bi bi-activity me-2"></i><span>Монитор</span>
+                    </a>
+                </li>
+                <li class="nav-item mb-1">
+                    <a class="nav-link d-flex align-items-center {% if request.endpoint == 'button_constructor_page' %}active{% endif %}" href="{{ url_for('button_constructor_page') }}">
+                        <i class="bi bi-grid-3x3-gap me-2"></i><span>Конструктор</span>
+                    </a>
+                </li>
+                <li class="nav-item mb-1">
+                    <a class="nav-link d-flex align-items-center {% if request.endpoint == 'settings_page' %}active{% endif %}" href="{{ url_for('settings_page') }}">
+                        <i class="bi bi-gear me-2"></i><span>Настройки</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="mt-auto">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="small text-muted">Бот</div>
+                    <div>
+                        {% if bot_status.is_running %}
+                        <span class="badge bg-success">Запущен</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Остановлен</span>
+                        {% endif %}
                     </div>
-                    <div class="d-flex justify-content-between gap-2">
+                </div>
+                <form action="{{ url_for('logout_page') }}" method="post" class="m-0">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="bi bi-box-arrow-right me-1"></i>Выход
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div class="row">
+            <aside class="col-lg-2 d-none d-lg-block border-end bg-white">
+                <div class="py-3">
+                    <ul class="nav nav-pills flex-column mb-3">
+                        <li class="nav-item mb-1">
+                            <a class="nav-link d-flex align-items-center {% if request.endpoint == 'dashboard_page' %}active{% endif %}" href="{{ url_for('dashboard_page') }}">
+                                <i class="bi bi-house me-2"></i><span>Главная</span>
+                            </a>
+                        </li>
+                        <li class="nav-item mb-1">
+                            <a class="nav-link d-flex align-items-center {% if request.endpoint == 'users_page' %}active{% endif %}" href="{{ url_for('users_page') }}">
+                                <i class="bi bi-people me-2"></i><span>Пользователи</span>
+                            </a>
+                        </li>
+                        <li class="nav-item mb-1">
+                            <a class="nav-link d-flex align-items-center {% if request.endpoint == 'admin_keys_page' %}active{% endif %}" href="{{ url_for('admin_keys_page') }}">
+                                <i class="bi bi-key me-2"></i><span>Ключи</span>
+                            </a>
+                        </li>
+                        <li class="nav-item mb-1">
+                            <a class="nav-link d-flex align-items-center {% if request.endpoint in ['support_list_page', 'support_ticket_page'] %}active{% endif %}" href="{{ url_for('support_list_page') }}">
+                                <i class="bi bi-headset me-2"></i><span>Поддержка</span>
+                                {% if open_tickets_count and open_tickets_count > 0 %}
+                                <span class="badge bg-danger ms-auto">{{ open_tickets_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item mb-1">
+                            <a class="nav-link d-flex align-items-center {% if request.endpoint == 'monitor_page' %}active{% endif %}" href="{{ url_for('monitor_page') }}">
+                                <i class="bi bi-activity me-2"></i><span>Монитор</span>
+                            </a>
+                        </li>
+                        <li class="nav-item mb-1">
+                            <a class="nav-link d-flex align-items-center {% if request.endpoint == 'button_constructor_page' %}active{% endif %}" href="{{ url_for('button_constructor_page') }}">
+                                <i class="bi bi-grid-3x3-gap me-2"></i><span>Конструктор</span>
+                            </a>
+                        </li>
+                        <li class="nav-item mb-1">
+                            <a class="nav-link d-flex align-items-center {% if request.endpoint == 'settings_page' %}active{% endif %}" href="{{ url_for('settings_page') }}">
+                                <i class="bi bi-gear me-2"></i><span>Настройки</span>
+                            </a>
+                        </li>
+                    </ul>
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="small text-muted">Бот</div>
+                            <div>
+                                {% if bot_status.is_running %}
+                                <span class="badge bg-success">Запущен</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Остановлен</span>
+                                {% endif %}
+                            </div>
+                        </div>
                         <form action="{{ url_for('logout_page') }}" method="post" class="m-0">
                             <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
                                 <i class="bi bi-box-arrow-right me-1"></i>Выход
@@ -382,26 +417,22 @@
                         </form>
                     </div>
                 </div>
-            </div>
-        </nav>
-
-        <div class="flex-grow-1 d-flex flex-column">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="container-fluid mt-3">
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-
-            <main class="flex-grow-1">
+            </aside>
+            <div class="col-12 col-lg-10 py-3">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="mb-3">
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
                 {% block content %}{% endblock %}
-            </main>
+            </div>
         </div>
     </div>
 
