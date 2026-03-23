@@ -72,6 +72,11 @@
               <input type="text" class="form-control" id="comment" name="comment" placeholder="Видно только вам" />
             </div>
 
+            <div id="create-key-preview" class="alert alert-info py-2 px-3 small d-none">
+              <div class="fw-bold mb-1"><i class="bi bi-eye me-1"></i>Предпросмотр:</div>
+              <div id="preview-text"></div>
+            </div>
+
             <button type="submit" class="btn btn-primary w-100" id="btn-submit-create">
               <i class="bi bi-key-fill me-1"></i>Создать ключ
             </button>
@@ -81,20 +86,83 @@
     </div>
 
     <div class="col-xl-8">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Все ключи</h5>
-          <form action="{{ url_for('sweep_expired_keys_route') }}" method="post" data-confirm="Удалить все истёкшие ключи?">
+      <div class="card mb-3">
+        <div class="card-body py-2">
+          <div class="row g-2 align-items-center">
+            <div class="col-md">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input id="keys-search" type="text" class="form-control" placeholder="Поиск (ID, Email, Host)..." value="{{ q or '' }}">
+              </div>
+            </div>
+            <div class="col-md-auto">
+              <select id="keys-host-filter" class="form-select form-select-sm">
+                <option value="">Все серверы</option>
+                {% for h in hosts %}
+                <option value="{{ h.host_name }}" {% if host_filter == h.host_name %}selected{% endif %}>{{ h.host_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-auto">
+              <select id="keys-expiry-filter" class="form-select form-select-sm">
+                <option value="all" {% if expiry_filter == 'all' %}selected{% endif %}>Любой срок</option>
+                <option value="today" {% if expiry_filter == 'today' %}selected{% endif %}>Сегодня</option>
+                <option value="7d" {% if expiry_filter == '7d' %}selected{% endif %}>7 дней</option>
+                <option value="expired" {% if expiry_filter == 'expired' %}selected{% endif %}>Истёкшие</option>
+              </select>
+            </div>
+            <div class="col-md-auto">
+              <select id="keys-kind-filter" class="form-select form-select-sm">
+                <option value="all" {% if kind_filter == 'all' %}selected{% endif %}>Все типы</option>
+                <option value="personal" {% if kind_filter == 'personal' %}selected{% endif %}>Личные</option>
+                <option value="gift" {% if kind_filter == 'gift' %}selected{% endif %}>Подарки</option>
+              </select>
+            </div>
+            <div class="col-md-auto">
+              <input id="keys-user-filter" type="text" class="form-control form-control-sm" placeholder="User ID" value="{{ user_filter or '' }}" style="max-width: 100px;">
+            </div>
+            <div class="col-md-auto">
+              <button id="keys-reset-filters" class="btn btn-sm btn-outline-secondary" type="button"><i class="bi bi-x-circle me-1"></i>Сброс</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body py-2">
+          <form id="keys-bulk-form" class="d-flex flex-wrap align-items-center gap-2" method="post" action="{{ url_for('admin_keys_bulk_action_route') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-outline-danger btn-sm">
-              <i class="bi bi-trash3 me-1"></i>Очистить истёкшие
+            <span class="small text-muted me-1">Массовые действия:</span>
+            <select id="keys-bulk-action" name="action" class="form-select form-select-sm" style="max-width: 180px;">
+              <option value="">Выберите действие</option>
+              <option value="extend_selected">Продлить (дни)</option>
+              <option value="delete_selected">Удалить выбранные</option>
+              <option value="delete_expired_filtered">Удалить истёкшие (по фильтру)</option>
+            </select>
+            <input id="keys-bulk-delta" name="delta_days" type="number" class="form-control form-control-sm d-none" placeholder="Дней" style="max-width: 80px;">
+            <button id="keys-bulk-apply" class="btn btn-sm btn-primary" type="submit" disabled>Применить</button>
+            <span id="keys-selected-count" class="small text-muted ms-auto">Выбрано: 0</span>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+          <h5 class="mb-0 fs-6">Список ключей</h5>
+          <form action="{{ url_for('sweep_expired_keys_route') }}" method="post" data-confirm="Удалить вообще все истёкшие ключи во всей базе?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-outline-danger btn-sm py-0" title="Глобальная очистка всех истёкших">
+              <i class="bi bi-trash3 me-1"></i>Sweep All
             </button>
           </form>
         </div>
-        <div class="table-responsive" style="max-height: calc(100vh - 220px); overflow: auto;">
+        <div class="table-responsive" style="max-height: calc(100vh - 350px); overflow: auto;">
           <table class="table table-sm table-hover align-middle mb-0" id="keys-table">
             <thead>
               <tr>
+                <th class="bg-body sticky-top" style="width: 36px;">
+                  <input id="keys-select-all" type="checkbox" class="form-check-input">
+                </th>
                 <th class="bg-body sticky-top">ID</th>
                 <th class="bg-body sticky-top">Пользователь</th>
                 <th class="bg-body sticky-top">Сервер</th>
@@ -103,7 +171,9 @@
                 <th class="bg-body sticky-top text-center">Действия</th>
               </tr>
             </thead>
-            <tbody id="keys-tbody" data-fetch-url="{{ url_for('admin_keys_table_partial') }}" data-fetch-interval="10000">
+            <tbody id="keys-tbody"
+                   data-fetch-url="{{ url_for('admin_keys_table_partial', q=q or '', host_name=host_filter or '', expiry=expiry_filter or 'all', kind=kind_filter or 'all', user_id=user_filter or '') }}"
+                   data-fetch-interval="10000">
               {% include 'Bootstrap/partials/admin_keys_table.html' %}
             </tbody>
           </table>
@@ -173,20 +243,168 @@
     const userInput = document.getElementById('user_id');
     const userGroup = document.getElementById('group_user');
     const keysTbody = document.getElementById('keys-tbody');
+
+    const searchInput = document.getElementById('keys-search');
+    const hostFilter = document.getElementById('keys-host-filter');
+    const expiryFilter = document.getElementById('keys-expiry-filter');
+    const kindFilter = document.getElementById('keys-kind-filter');
+    const userFilterInput = document.getElementById('keys-user-filter');
+    const resetFiltersBtn = document.getElementById('keys-reset-filters');
+
+    const bulkForm = document.getElementById('keys-bulk-form');
+    const bulkAction = document.getElementById('keys-bulk-action');
+    const bulkDelta = document.getElementById('keys-bulk-delta');
+    const bulkApplyBtn = document.getElementById('keys-bulk-apply');
+    const selectedCountEl = document.getElementById('keys-selected-count');
+    const selectAllCb = document.getElementById('keys-select-all');
+
+    const previewDiv = document.getElementById('create-key-preview');
+    const previewText = document.getElementById('preview-text');
+
     if (!form || !submitBtn || !keysTbody) return;
 
     function getCsrf() {
       return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     }
 
+    function collectFilters() {
+      return {
+        q: searchInput?.value.trim() || '',
+        host_name: hostFilter?.value || '',
+        expiry: expiryFilter?.value || 'all',
+        kind: kindFilter?.value || 'all',
+        user_id: userFilterInput?.value.trim() || ''
+      };
+    }
+
+    function updateQuery(next) {
+      const params = new URLSearchParams(window.location.search);
+      Object.keys(next).forEach((k) => {
+        const v = next[k];
+        if (v === null || v === undefined || v === '' || v === 'all') params.delete(k);
+        else params.set(k, String(v));
+      });
+      window.location.search = params.toString();
+    }
+
     async function refreshKeysTable() {
-      const url = keysTbody.getAttribute('data-fetch-url');
-      if (!url) return;
+      const filters = collectFilters();
+      const params = new URLSearchParams(filters);
+      const url = keysTbody.getAttribute('data-fetch-url').split('?')[0] + '?' + params.toString();
       try {
         const resp = await fetch(url, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
         if (resp.ok) keysTbody.innerHTML = await resp.text();
       } catch(_) {}
     }
+
+    function updatePreview() {
+      if (!previewDiv || !previewText) return;
+      const type = keyTypeInput.value;
+      const user = userInput.value.trim();
+      const host = hostSel.value;
+      const planOpt = planSel.options[planSel.selectedIndex];
+      const planName = planOpt ? planOpt.text : '—';
+      const expiry = expiryInput.value;
+      const email = emailInput.value;
+
+      if (!host) {
+        previewDiv.classList.add('d-none');
+        return;
+      }
+
+      let text = ``;
+      if (type === 'gift') {
+        text += `🎁 <b>Подарок</b><br>`;
+      } else {
+        text += `👤 <b>Пользователь:</b> ${user || '—'}<br>`;
+      }
+      text += `🌐 <b>Сервер:</b> ${host}<br>`;
+      text += `📋 <b>Тариф:</b> ${planName}<br>`;
+      text += `📅 <b>До:</b> ${expiry || '—'}<br>`;
+      text += `📧 <b>Email:</b> ${email || '<i>генерируется...</i>'}`;
+
+      previewText.innerHTML = text;
+      previewDiv.classList.remove('d-none');
+    }
+
+    [userInput, hostSel, planSel, expiryInput, keyTypeInput, btnTypePersonal, btnTypeGift].forEach(el => {
+      el?.addEventListener('change', updatePreview);
+      el?.addEventListener('input', updatePreview);
+    });
+    updatePreview();
+
+    let searchTimer;
+    searchInput?.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => updateQuery(collectFilters()), 500);
+    });
+    [hostFilter, expiryFilter, kindFilter].forEach(el => {
+      el?.addEventListener('change', () => updateQuery(collectFilters()));
+    });
+    userFilterInput?.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => updateQuery(collectFilters()), 500);
+    });
+    resetFiltersBtn?.addEventListener('click', () => {
+      updateQuery({ q: '', host_name: '', expiry: 'all', kind: 'all', user_id: '' });
+    });
+
+    function getSelectedIds() {
+      return Array.from(keysTbody.querySelectorAll('.keys-row-select:checked')).map(cb => cb.value);
+    }
+
+    function updateBulkUI() {
+      const ids = getSelectedIds();
+      if (selectedCountEl) selectedCountEl.textContent = `Выбрано: ${ids.length}`;
+      if (bulkApplyBtn) bulkApplyBtn.disabled = (ids.length === 0 && bulkAction.value !== 'delete_expired_filtered') || !bulkAction.value;
+      if (bulkDelta) bulkDelta.classList.toggle('d-none', bulkAction.value !== 'extend_selected');
+    }
+
+    selectAllCb?.addEventListener('change', () => {
+      const checked = selectAllCb.checked;
+      keysTbody.querySelectorAll('.keys-row-select').forEach(cb => cb.checked = checked);
+      updateBulkUI();
+    });
+
+    keysTbody.addEventListener('change', (e) => {
+      if (e.target.classList.contains('keys-row-select')) updateBulkUI();
+    });
+
+    bulkAction?.addEventListener('change', updateBulkUI);
+
+    bulkForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const action = bulkAction.value;
+      const ids = getSelectedIds();
+      if (!action) return;
+      if (action !== 'delete_expired_filtered' && !ids.length) return;
+
+      const confirmMsg = action === 'delete_selected' ? 'Удалить выбранные ключи?' :
+                        action === 'delete_expired_filtered' ? 'Удалить истёкшие ключи, соответствующие текущим фильтрам?' :
+                        'Продлить выбранные ключи?';
+      if (!confirm(confirmMsg)) return;
+
+      const fd = new FormData(bulkForm);
+      ids.forEach(id => fd.append('key_ids', id));
+      // Add current filters for delete_expired_filtered
+      const filters = collectFilters();
+      Object.keys(filters).forEach(k => fd.append(k, filters[k]));
+
+      bulkApplyBtn.disabled = true;
+      try {
+        const resp = await fetch(bulkForm.action, { method: 'POST', body: fd, credentials: 'same-origin' });
+        const data = await resp.json();
+        if (data.ok) {
+          window.location.reload();
+        } else {
+          alert('Ошибка: ' + (data.error || 'unknown'));
+        }
+      } catch (err) {
+        alert('Ошибка сети: ' + err.message);
+      } finally {
+        bulkApplyBtn.disabled = false;
+      }
+    });
 
     function setExpiryDays(days) {
       if (!expiryInput) return;
@@ -194,6 +412,7 @@
       d.setDate(d.getDate() + Number(days || 0));
       const pad = n => String(n).padStart(2, '0');
       expiryInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      updatePreview();
     }
 
     document.querySelectorAll('[data-preset]').forEach(btn => {

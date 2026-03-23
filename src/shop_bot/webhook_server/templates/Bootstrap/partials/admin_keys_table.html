@@ -1,10 +1,29 @@
 {% for k in keys %}
 <tr>
+  <td>
+    <input type="checkbox" class="form-check-input keys-row-select" value="{{ k.key_id }}">
+  </td>
   <td class="small text-muted">#{{ k.key_id }}</td>
-  <td class="small">{{ k.user_id or '-' }}</td>
+  <td class="small">
+    {% if k.kind == 'gift' %}
+      <span class="badge text-bg-warning" title="Подарочный ключ"><i class="bi bi-gift me-1"></i>Gift</span>
+    {% else %}
+      {{ k.user_id or '-' }}
+    {% endif %}
+  </td>
   <td class="small"><span class="badge text-bg-light">{{ k.host_name }}</span></td>
   <td class="small text-truncate" style="max-width:160px" title="{{ k.key_email }}">{{ k.key_email }}</td>
-  <td class="small">{{ k.expiry_date or '—' }}</td>
+  <td class="small">
+    {% if k.expiry_status == 'expired' %}
+      <span class="badge text-bg-danger" title="{{ k.expiry_date }}">Истёк</span>
+    {% elif k.expiry_status == '24h' %}
+      <span class="badge text-bg-warning" title="{{ k.expiry_date }}">< 24ч</span>
+    {% elif k.expiry_status == '7d' %}
+      <span class="badge text-bg-info" title="{{ k.expiry_date }}">< 7д</span>
+    {% else %}
+      {{ k.expiry_date or '—' }}
+    {% endif %}
+  </td>
   <td class="text-center">
     <div class="dropdown">
       <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
