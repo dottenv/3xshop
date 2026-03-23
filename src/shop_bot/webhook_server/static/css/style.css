@@ -1482,11 +1482,80 @@ body.login-page {
 .settings-column-left {
 	flex: 2;
 	min-width: 380px;
+	width: 100%;
 }
 
 .settings-column-right {
 	flex: 3;
 	min-width: 450px;
+	width: 100%;
+}
+
+/* Fix for hosts grid layout */
+.settings-column-left #hosts .row {
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.settings-column-left #hosts .row > [class*="col-"] {
+	max-width: 100%;
+}
+
+.settings-column-left #hosts .col-lg-5 {
+	flex: 0 0 41.666667%;
+	max-width: 41.666667%;
+}
+
+.settings-column-left #hosts .col-lg-7 {
+	flex: 0 0 58.333333%;
+	max-width: 58.333333%;
+}
+
+/* SSH Speedtest form grid fixes */
+.settings-column-left #hosts .row.g-2 {
+	--bs-gutter-x: 0.5rem;
+	--bs-gutter-y: 0.5rem;
+}
+
+.settings-column-left #hosts .row.g-2 > [class*="col-"] {
+	padding-right: calc(var(--bs-gutter-x) * 0.5);
+	padding-left: calc(var(--bs-gutter-x) * 0.5);
+	margin-top: var(--bs-gutter-y);
+}
+
+.settings-column-left #hosts .col-md-2,
+.settings-column-left #hosts .col-md-3,
+.settings-column-left #hosts .col-md-5,
+.settings-column-left #hosts .col-md-7 {
+	flex: 0 0 auto;
+	width: 100%;
+}
+
+@media (min-width: 768px) {
+	.settings-column-left #hosts .col-md-2 {
+		flex: 0 0 auto;
+		width: 16.666667%;
+	}
+	.settings-column-left #hosts .col-md-3 {
+		flex: 0 0 auto;
+		width: 25%;
+	}
+	.settings-column-left #hosts .col-md-5 {
+		flex: 0 0 auto;
+		width: 41.666667%;
+	}
+	.settings-column-left #hosts .col-md-7 {
+		flex: 0 0 auto;
+		width: 58.333333%;
+	}
+}
+
+@media (max-width: 991.98px) {
+	.settings-column-left #hosts .col-lg-5,
+	.settings-column-left #hosts .col-lg-7 {
+		flex: 0 0 100%;
+		max-width: 100%;
+	}
 }
 
 .host-card {
