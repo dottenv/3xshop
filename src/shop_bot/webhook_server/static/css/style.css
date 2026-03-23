@@ -577,16 +577,14 @@ body.layout-sidebar {
     overflow-y: auto;
   }
   .table-wrapper .table {
-    width: 100%;
-    table-layout: fixed;
+    width: max-content;
+    min-width: 100%;
     font-size: 0.85rem;
   }
   .table-wrapper .table th,
   .table-wrapper .table td,
   .table-wrapper .table .text-nowrap {
-    white-space: normal !important;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    white-space: nowrap !important;
   }
 }
 
