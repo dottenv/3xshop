@@ -970,8 +970,6 @@ def get_support_router() -> Router:
         try:
             if created_new:
                 await message.answer(f"✅ Обращение создано: #{ticket_id}. Мы ответим вам как можно скорее.")
-            else:
-                await message.answer("Сообщение принято. Поддержка скоро ответит.")
         except Exception:
             pass
 

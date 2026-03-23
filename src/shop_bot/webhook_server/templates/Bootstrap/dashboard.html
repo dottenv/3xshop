@@ -1,0 +1,618 @@
+{% extends "Bootstrap/base.html" %}
+
+{% block title %}Панель управления{% endblock %}
+
+{% block content %}
+        <!-- Stats Cards -->
+        <div class="row row-deck mb-4" id="dash-stats"
+             data-fetch-url="{{ url_for('dashboard_stats_partial') }}"
+             data-fetch-interval="8000">
+            {% include 'Bootstrap/partials/dashboard_stats.html' %}
+        </div>
+
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+                <!-- Speedtest Block -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="bi bi-speedometer2 me-2"></i>Тест скорости
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Хост для мониторинга</label>
+                                <div class="soft-select" id="st_host_softselect" data-target="st-host">
+                                    <button type="button" class="soft-select-toggle" id="st_host_toggle">Выберите хост...</button>
+                                    <div class="soft-select-menu" id="st_host_menu"></div>
+                                    <select id="st-host" class="form-select d-none">
+                                        {% for h in hosts %}
+                                        <option value="{{ h.host_name }}">{{ h.host_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Последний результат</label>
+                                <div id="st-latest" class="text-truncate">—</div>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <div class="btn-group" role="group">
+                                    <form id="st-run-form" action="#" method="post" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                        <input type="hidden" name="method" value="both" />
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-lightning me-1"></i>Тест
+                                        </button>
+                                    </form>
+                                    <form id="st-run-all-form" action="{{ url_for('run_all_speedtests_route') }}" method="post" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Все
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="st-top-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Block -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="bi bi-graph-up me-2"></i>Динамика (30 дней)
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-primary">Пользователи</span>
+                            <span class="badge bg-success">Ключи</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="combinedStatsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <div class="card" style="max-height: 600px; display: flex; flex-direction: column;">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="bi bi-clock-history me-2"></i>Недавние транзакции
+                        </h5>
+                    </div>
+                    <div class="card-body p-0 flex-grow-1 overflow-auto">
+                        {% if transactions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Юзер</th>
+                                        <th class="text-center">План</th>
+                                        <th>Цена</th>
+                                        <th>Дата</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-transactions"
+                                       data-fetch-url="{{ url_for('dashboard_transactions_partial', page=current_page) }}"
+                                       data-fetch-interval="10000">
+                                    {% include 'Bootstrap/partials/dashboard_transactions.html' %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center p-4">
+                            <i class="bi bi-info-circle fs-1 text-muted mb-2"></i>
+                            <p class="text-muted mb-0">Пока нет транзакций.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if total_pages > 1 %}
+                    <div class="card-footer">
+                        <nav>
+                            <ul class="pagination pagination-sm justify-content-center m-0">
+                                <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                                    <a class="page-link" href="{{ url_for('dashboard_page', page=current_page - 1) }}" aria-label="Previous">
+                                        <span>&laquo;</span>
+                                    </a>
+                                </li>
+                                {% for p in range(1, total_pages + 1) %}
+                                <li class="page-item {% if p == current_page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('dashboard_page', page=p) }}">{{ p }}</a>
+                                </li>
+                                {% endfor %}
+                                <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+                                    <a class="page-link" href="{{ url_for('dashboard_page', page=current_page + 1) }}" aria-label="Next">
+                                        <span>&raquo;</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speedtest Modal -->
+    <div class="modal fade" id="speedtestModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-speedometer2 me-2"></i>Скорость — <span id="st-modal-host"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row align-items-center mb-3">
+                        <div class="col-auto">
+                            <label class="form-label mb-0">Метрика:</label>
+                        </div>
+                        <div class="col-auto">
+                            <select id="st-metric" class="form-select form-select-sm">
+                                <option value="download_mbps" selected>Скорость загрузки (Mbps)</option>
+                                <option value="upload_mbps">Скорость отдачи (Mbps)</option>
+                                <option value="ping_ms">Пинг (ms)</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label mb-0">Период:</label>
+                        </div>
+                        <div class="col-auto">
+                            <select id="st-range" class="form-select form-select-sm">
+                                <option value="24">24 точки</option>
+                                <option value="60" selected>60 точек</option>
+                                <option value="120">120 точек</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button id="st-refresh" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-repeat me-1"></i>Обновить
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 360px;">
+                        <canvas id="st-detail-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speedtest Running Modal -->
+    <div class="modal fade" id="speedtestRunningModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">
+                        <i class="bi bi-hourglass-split me-2"></i>Идёт измерение скорости…
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <div class="fw-semibold">Пожалуйста, подождите 10–30 секунд</div>
+                    <div class="text-muted">Мы запускаем SSH и сетевой тест. Окно закроется автоматически по завершении.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Data -->
+    <script id="chart-data" type="application/json">
+        {{ chart_data | tojson }}
+    </script>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        const CHART_DATA = JSON.parse(document.getElementById('chart-data').textContent);
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Soft-select functionality
+            function buildSoftSelect(selectEl, toggleEl, menuEl, placeholder) {
+                if (!selectEl || !toggleEl || !menuEl) return;
+                
+                // Render items
+                menuEl.innerHTML = '';
+                const opts = Array.from(selectEl.options || []);
+                opts.forEach(opt => {
+                    const div = document.createElement('div');
+                    div.className = 'soft-select-item' + (opt.selected ? ' is-active' : '');
+                    div.dataset.value = opt.value;
+                    div.innerHTML = `<span>${opt.textContent || ''}</span>`;
+                    div.addEventListener('click', () => {
+                        selectEl.value = opt.value;
+                        menuEl.querySelectorAll('.soft-select-item').forEach(el => el.classList.remove('is-active'));
+                        div.classList.add('is-active');
+                        toggleEl.textContent = opt.textContent || placeholder || '';
+                        toggleEl.closest('.soft-select')?.classList.remove('open');
+                        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                    menuEl.appendChild(div);
+                });
+                
+                const selOpt = opts.find(o => o.selected) || opts[0];
+                toggleEl.textContent = (selOpt && selOpt.textContent) || placeholder || '';
+                const wrap = toggleEl.closest('.soft-select');
+                
+                function placeMenu() {
+                    const r = toggleEl.getBoundingClientRect();
+                    menuEl.style.position = 'fixed';
+                    menuEl.style.left = `${Math.round(r.left)}px`;
+                    menuEl.style.top = `${Math.round(r.bottom + 6)}px`;
+                    menuEl.style.width = `${Math.round(r.width)}px`;
+                    menuEl.style.zIndex = '1065';
+                }
+                
+                function openMenu() {
+                    if (menuEl.parentElement !== document.body) document.body.appendChild(menuEl);
+                    placeMenu();
+                    wrap.classList.add('open');
+                    menuEl.style.display = 'block';
+                    window.addEventListener('scroll', placeMenu, true);
+                    window.addEventListener('resize', placeMenu, true);
+                }
+                
+                function closeMenu() {
+                    wrap.classList.remove('open');
+                    menuEl.style.display = 'none';
+                    if (menuEl.parentElement === document.body) wrap.appendChild(menuEl);
+                    window.removeEventListener('scroll', placeMenu, true);
+                    window.removeEventListener('resize', placeMenu, true);
+                }
+                
+                toggleEl.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    if (wrap.classList.contains('open')) closeMenu(); 
+                    else openMenu(); 
+                };
+                
+                document.addEventListener('click', (e) => { 
+                    if (!wrap.contains(e.target)) closeMenu(); 
+                });
+                
+                document.addEventListener('keydown', (e) => { 
+                    if (e.key === 'Escape') closeMenu(); 
+                });
+            }
+            
+            function initSoftSelect(selectId, placeholder) {
+                const sel = document.getElementById(selectId);
+                const wrap = document.querySelector(`.soft-select[data-target="${selectId}"]`);
+                if (!sel || !wrap) return;
+                const toggle = wrap.querySelector('.soft-select-toggle');
+                const menu = wrap.querySelector('.soft-select-menu');
+                buildSoftSelect(sel, toggle, menu, placeholder);
+                sel.addEventListener('change', () => buildSoftSelect(sel, toggle, menu, placeholder));
+            }
+            
+            // Speedtest functionality
+            const hostSelect = document.getElementById('st-host');
+            const latestBox = document.getElementById('st-latest');
+            const topCanvas = document.getElementById('st-top-canvas');
+            const runForm = document.getElementById('st-run-form');
+            let topChart = null;
+            
+            async function loadAndDrawTop() {
+                if (!hostSelect || !topCanvas) return;
+                const host = hostSelect.value;
+                const url = `{{ url_for('host_speedtests_json', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(host));
+                try {
+                    const resp = await fetch(url + '?limit=60', {headers: {'Accept': 'application/json'}});
+                    const data = await resp.json();
+                    if (!data || !data.ok) return;
+                    const items = (data.items || []).slice().reverse();
+                    
+                    // Latest result
+                    if (items.length) {
+                        const last = items[items.length - 1];
+                        const parts = [];
+                        if (last.method) parts.push(`<span class="badge bg-info">${String(last.method).toUpperCase()}</span>`);
+                        parts.push(`<span title="Ping" class="text-nowrap"><i class="bi bi-lightning text-warning me-1"></i>${last.ping_ms ?? '—'}</span>`);
+                        parts.push(`<span title="Download" class="text-nowrap text-primary"><i class="bi bi-arrow-down me-1"></i>${last.download_mbps ?? '—'}</span>`);
+                        parts.push(`<span title="Upload" class="text-nowrap text-success"><i class="bi bi-arrow-up me-1"></i>${last.upload_mbps ?? '—'}</span>`);
+                        if (last.server_name) parts.push(`<span class="text-truncate d-inline-block" style="max-width:100px" title="${last.server_name}"><i class="bi bi-geo-alt me-1"></i>${last.server_name}</span>`);
+                        parts.push(`<span class="text-muted small">${last.created_at.split(' ')[1]}</span>`);
+                        if (latestBox) {
+                            latestBox.innerHTML = `<div class="d-flex align-items-center gap-2 flex-wrap">${parts.join('<span class="text-muted">|</span>')}</div>`;
+                        }
+                    } else {
+                        if (latestBox) latestBox.textContent = 'Нет данных';
+                    }
+                    
+                    // Chart
+                    const labels = items.map(it => it.created_at);
+                    const series = items.map(it => Number(it.download_mbps || 0));
+                    const seriesUp = items.map(it => Number(it.upload_mbps || 0));
+                    const ctx = topCanvas.getContext('2d');
+                    if (topChart) topChart.destroy();
+                    topChart = new Chart(ctx, {
+                        type: 'line',
+                        data: { 
+                            labels, 
+                            datasets: [
+                                {
+                                    label: 'Down', 
+                                    data: series,
+                                    borderColor: '#667eea', 
+                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                    borderWidth: 2, 
+                                    fill: true, 
+                                    tension: 0.3, 
+                                    pointRadius: 0
+                                },
+                                {
+                                    label: 'Up', 
+                                    data: seriesUp,
+                                    borderColor: '#2fb344', 
+                                    backgroundColor: 'rgba(47, 179, 68, 0.1)',
+                                    borderWidth: 2, 
+                                    fill: false, 
+                                    tension: 0.3, 
+                                    pointRadius: 0
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true, 
+                                    position: 'top', 
+                                    align: 'end', 
+                                    labels: {
+                                        boxWidth: 8, 
+                                        usePointStyle: true
+                                    }
+                                }, 
+                                tooltip: {
+                                    enabled: true, 
+                                    mode: 'nearest', 
+                                    intersect: false
+                                }
+                            },
+                            scales: { 
+                                x: { 
+                                    display: true, 
+                                    ticks: { 
+                                        maxTicksLimit: 8, 
+                                        font: {size: 10} 
+                                    } 
+                                }, 
+                                y: { 
+                                    display: true, 
+                                    beginAtZero: true, 
+                                    ticks: { 
+                                        font: {size: 10} 
+                                    } 
+                                } 
+                            }
+                        }
+                    });
+                } catch(e) {
+                    console.error('Error loading speedtest data:', e);
+                }
+            }
+            
+            if (hostSelect) {
+                initSoftSelect('st-host', 'Выберите хост...');
+                hostSelect.addEventListener('change', loadAndDrawTop);
+                await loadAndDrawTop();
+            }
+            
+            function showRunning() {
+                const modal = new bootstrap.Modal(document.getElementById('speedtestRunningModal'), {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                modal.show();
+            }
+            
+            function hideRunning() {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('speedtestRunningModal'));
+                if (modal) modal.hide();
+            }
+            
+            if (runForm && hostSelect) {
+                runForm.addEventListener('submit', async (ev) => {
+                    ev.preventDefault();
+                    const host = hostSelect.value;
+                    const fd = new FormData(runForm);
+                    try {
+                        showRunning();
+                        const resp = await fetch(`{{ url_for('run_host_speedtest_route', host_name='__HOST__') }}`.replace('__HOST__', encodeURIComponent(host)), {
+                            method: 'POST', 
+                            body: fd, 
+                            credentials: 'same-origin'
+                        });
+                        setTimeout(async () => { 
+                            await loadAndDrawTop(); 
+                            hideRunning(); 
+                        }, 800);
+                    } catch(e) {
+                        console.error('Error running speedtest:', e);
+                        hideRunning();
+                    }
+                });
+            }
+            
+            // Run all speedtests
+            const runAllForm = document.getElementById('st-run-all-form');
+            if (runAllForm) {
+                runAllForm.addEventListener('submit', async (ev) => {
+                    ev.preventDefault();
+                    const fd = new FormData(runAllForm);
+                    try {
+                        showRunning();
+                        const resp = await fetch(runAllForm.action, { 
+                            method: 'POST', 
+                            body: fd, 
+                            credentials: 'same-origin' 
+                        });
+                        setTimeout(async () => { 
+                            await loadAndDrawTop(); 
+                            hideRunning(); 
+                        }, 1200);
+                    } catch(e) {
+                        console.error('Error running all speedtests:', e);
+                        hideRunning();
+                    }
+                });
+            }
+            
+            // Detailed modal logic
+            const modalEl = document.getElementById('speedtestModal');
+            const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+            const titleHost = document.getElementById('st-modal-host');
+            const metricEl = document.getElementById('st-metric');
+            const rangeEl = document.getElementById('st-range');
+            const refreshBtn = document.getElementById('st-refresh');
+            const detailCanvas = document.getElementById('st-detail-canvas');
+            let detailChart = null;
+            let currentHost = null;
+            let currentUrl = null;
+            
+            window.openSpeedtestModal = async function(host, url) {
+                currentHost = host; 
+                currentUrl = url;
+                if (titleHost) titleHost.textContent = host;
+                if (modal) modal.show();
+                await drawDetail();
+            };
+            
+            async function drawDetail() {
+                if (!detailCanvas) return;
+                const metric = metricEl.value || 'download_mbps';
+                const limit = parseInt(rangeEl.value || '60', 10);
+                try {
+                    const resp = await fetch(currentUrl + '?limit=' + limit, {
+                        headers: {'Accept': 'application/json'}
+                    });
+                    const data = await resp.json();
+                    if (!data || !data.ok) return;
+                    const items = (data.items || []).slice().reverse();
+                    const labels = items.map(it => it.created_at);
+                    const series = items.map(it => Number(it[metric] || 0));
+                    const ctx = detailCanvas.getContext('2d');
+                    if (detailChart) { 
+                        detailChart.destroy(); 
+                    }
+                    detailChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels, 
+                            datasets: [{
+                                label: metric,
+                                data: series,
+                                borderColor: metric === 'ping_ms' ? '#f59f00' : (metric === 'upload_mbps' ? '#2fb344' : '#667eea'),
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 2,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {display: false},
+                                tooltip: {
+                                    enabled: true, 
+                                    mode: 'index', 
+                                    intersect: false
+                                }
+                            },
+                            interaction: { 
+                                intersect: false, 
+                                mode: 'nearest' 
+                            },
+                            scales: {
+                                x: { 
+                                    display: true, 
+                                    ticks: { 
+                                        maxTicksLimit: 10 
+                                    } 
+                                },
+                                y: { 
+                                    display: true, 
+                                    beginAtZero: true 
+                                }
+                            }
+                        }
+                    });
+                } catch(e) {
+                    console.error('Error drawing detail chart:', e);
+                }
+            }
+            
+            if (refreshBtn) refreshBtn.addEventListener('click', drawDetail);
+            if (metricEl) metricEl.addEventListener('change', drawDetail);
+            if (rangeEl) rangeEl.addEventListener('change', drawDetail);
+            
+            // Initialize combined stats chart
+            const combinedCanvas = document.getElementById('combinedStatsChart');
+            if (combinedCanvas && CHART_DATA) {
+                const ctx = combinedCanvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: CHART_DATA.labels || [],
+                        datasets: [
+                            {
+                                label: 'Пользователи',
+                                data: CHART_DATA.users || [],
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3
+                            },
+                            {
+                                label: 'Ключи',
+                                data: CHART_DATA.keys || [],
+                                borderColor: '#2fb344',
+                                backgroundColor: 'rgba(47, 179, 68, 0.1)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+{% endblock %}
