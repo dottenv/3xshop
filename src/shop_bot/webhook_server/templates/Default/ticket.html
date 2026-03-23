@@ -640,14 +640,15 @@
       this.style.height = newHeight + 'px';
     });
 
-    // Отправка по Ctrl+Enter
+    // Отправка по Enter, перенос строки по Shift+Enter
     replyText.addEventListener('keydown', function(e) {
-      if (e.ctrlKey && e.key === 'Enter') {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         if (this.value.trim()) {
           replyForm.submit();
         }
       }
+      // Shift+Enter для переноса строки (стандартное поведение)
     });
   }
 
