@@ -515,8 +515,9 @@ body.layout-sidebar {
 
 /* ===== Tables & Standardized Layout ===== */
 .table-responsive {
-  /* Allow dropdowns to overflow */
-  overflow: visible !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Container for standardized tables with fixed headers and internal scroll */
