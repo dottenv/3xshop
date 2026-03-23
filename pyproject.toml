@@ -19,7 +19,8 @@ dependencies = [
     "pytonconnect==0.3.2",
     "paramiko==3.5.0",
     "psutil==5.9.8",
-    "colorama==0.4.6"
+    "colorama==0.4.6",
+    "flask_socketio"
 ]
 
 [project.optional-dependencies]

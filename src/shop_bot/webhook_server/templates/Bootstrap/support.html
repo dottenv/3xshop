@@ -442,6 +442,10 @@
     });
 
     syncActionButtons();
+    const initialTicket = new URLSearchParams(window.location.search).get('open_ticket');
+    if (initialTicket) {
+      loadTicket(Number(initialTicket)).catch(() => {});
+    }
     table.addEventListener('dblclick', async (e) => {
       const row = e.target.closest('.ticket-row');
       if (!row) return;
