@@ -8,53 +8,18 @@
       <div class="text-muted small">Список тикетов, фильтры и быстрые действия</div>
     </div>
     <div class="col-12 col-xl-auto">
-      <div class="d-flex flex-wrap gap-2">
+      <div class="d-flex flex-wrap gap-2 justify-content-xl-end">
         <a class="btn btn-sm {% if not filter_status or filter_status == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='all', q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc', per_page=per_page or 20) }}">Все ({{ all_count }})</a>
         <a class="btn btn-sm {% if filter_status == 'open' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='open', q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc', per_page=per_page or 20) }}">Открытые ({{ open_count }})</a>
         <a class="btn btn-sm {% if filter_status == 'closed' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ url_for('support_list_page', status='closed', q=q or '', user_id=filter_user_id, ticket_id=filter_ticket_id, sort=sort or 'updated_desc', per_page=per_page or 20) }}">Закрытые ({{ closed_count }})</a>
+        <button id="open-support-filters" type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#supportFiltersModal" title="Фильтры">
+          <i class="bi bi-funnel"></i>
+        </button>
       </div>
     </div>
   </div>
 
   <div class="card flex-grow-1 d-flex flex-column" style="min-height: calc(100vh - 220px);">
-    <div class="card-body border-bottom">
-      <div class="row g-2">
-        <div class="col-12 col-lg-4">
-          <div class="input-group input-group-sm">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input id="support-q" type="text" class="form-control" placeholder="Поиск по ID, пользователю или теме" value="{{ q or '' }}">
-          </div>
-        </div>
-        <div class="col-6 col-lg-2">
-          <input id="support-user-id" type="number" min="1" class="form-control form-control-sm" placeholder="User ID" value="{{ filter_user_id if filter_user_id is not none else '' }}">
-        </div>
-        <div class="col-6 col-lg-2">
-          <input id="support-ticket-id" type="number" min="1" class="form-control form-control-sm" placeholder="Ticket ID" value="{{ filter_ticket_id if filter_ticket_id is not none else '' }}">
-        </div>
-        <div class="col-6 col-lg-2">
-          <select id="support-sort" class="form-select form-select-sm">
-            <option value="updated_desc" {% if (sort or 'updated_desc') == 'updated_desc' %}selected{% endif %}>Сначала новые</option>
-            <option value="updated_asc" {% if sort == 'updated_asc' %}selected{% endif %}>Сначала старые</option>
-            <option value="id_desc" {% if sort == 'id_desc' %}selected{% endif %}>ID по убыванию</option>
-            <option value="id_asc" {% if sort == 'id_asc' %}selected{% endif %}>ID по возрастанию</option>
-            <option value="status" {% if sort == 'status' %}selected{% endif %}>Сначала открытые</option>
-          </select>
-        </div>
-        <div class="col-6 col-lg-1">
-          <select id="support-per-page" class="form-select form-select-sm">
-            <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
-            <option value="20" {% if per_page == 20 or not per_page %}selected{% endif %}>20</option>
-            <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
-            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
-            <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
-          </select>
-        </div>
-        <div class="col-12 col-lg-1 d-grid">
-          <button id="support-reset" class="btn btn-sm btn-outline-secondary" type="button">Сброс</button>
-        </div>
-      </div>
-    </div>
-
     <div class="table-responsive flex-grow-1">
       <table id="support-table" class="table table-hover align-middle mb-0">
         <thead class="table-light position-sticky top-0">
@@ -110,6 +75,60 @@
   </div>
 </div>
 
+<div class="modal fade" id="supportFiltersModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Фильтры тикетов</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label small mb-1" for="support-q">Поиск</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input id="support-q" type="text" class="form-control" placeholder="ID, пользователь или тема" value="{{ q or '' }}">
+            </div>
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1" for="support-user-id">User ID</label>
+            <input id="support-user-id" type="number" min="1" class="form-control form-control-sm" value="{{ filter_user_id if filter_user_id is not none else '' }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1" for="support-ticket-id">Ticket ID</label>
+            <input id="support-ticket-id" type="number" min="1" class="form-control form-control-sm" value="{{ filter_ticket_id if filter_ticket_id is not none else '' }}">
+          </div>
+          <div class="col-7">
+            <label class="form-label small mb-1" for="support-sort">Сортировка</label>
+            <select id="support-sort" class="form-select form-select-sm">
+              <option value="updated_desc" {% if (sort or 'updated_desc') == 'updated_desc' %}selected{% endif %}>Сначала новые</option>
+              <option value="updated_asc" {% if sort == 'updated_asc' %}selected{% endif %}>Сначала старые</option>
+              <option value="id_desc" {% if sort == 'id_desc' %}selected{% endif %}>ID по убыванию</option>
+              <option value="id_asc" {% if sort == 'id_asc' %}selected{% endif %}>ID по возрастанию</option>
+              <option value="status" {% if sort == 'status' %}selected{% endif %}>Сначала открытые</option>
+            </select>
+          </div>
+          <div class="col-5">
+            <label class="form-label small mb-1" for="support-per-page">На странице</label>
+            <select id="support-per-page" class="form-select form-select-sm">
+              <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+              <option value="20" {% if per_page == 20 or not per_page %}selected{% endif %}>20</option>
+              <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+              <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+              <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="support-reset" class="btn btn-outline-secondary btn-sm" type="button">Сброс</button>
+        <button id="support-apply" class="btn btn-primary btn-sm" type="button">Применить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="ticket-context-menu" class="dropdown-menu">
   <button class="dropdown-item" type="button" data-action="open"><i class="bi bi-box-arrow-up-right me-2"></i>Открыть</button>
   <button class="dropdown-item" type="button" data-action="toggle-status"><i class="bi bi-arrow-repeat me-2"></i>Сменить статус</button>
@@ -125,6 +144,8 @@
     const sortSelect = document.getElementById('support-sort');
     const perPageSelect = document.getElementById('support-per-page');
     const resetBtn = document.getElementById('support-reset');
+    const applyBtn = document.getElementById('support-apply');
+    const filtersModalEl = document.getElementById('supportFiltersModal');
     const table = document.getElementById('support-table');
     const tbody = document.getElementById('support-tbody');
     const menu = document.getElementById('ticket-context-menu');
@@ -140,36 +161,33 @@
       window.location.search = params.toString();
     }
 
-    let searchTimer;
-    if (qInput) {
-      qInput.addEventListener('input', () => {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => {
-          updateQuery({
-            q: qInput.value.trim(),
-            user_id: userIdInput?.value || '',
-            ticket_id: ticketIdInput?.value || '',
-            sort: sortSelect?.value || 'updated_desc',
-            per_page: perPageSelect?.value || '20',
-            page: 1
-          });
-        }, 350);
-      });
+    function collectFilterQuery() {
+      return {
+        q: qInput?.value.trim() || '',
+        user_id: userIdInput?.value || '',
+        ticket_id: ticketIdInput?.value || '',
+        sort: sortSelect?.value || 'updated_desc',
+        per_page: perPageSelect?.value || '20',
+        page: 1
+      };
     }
 
-    const hardFilters = [userIdInput, ticketIdInput, sortSelect, perPageSelect].filter(Boolean);
-    hardFilters.forEach((el) => {
-      el.addEventListener('change', () => {
-        updateQuery({
-          q: qInput?.value.trim() || '',
-          user_id: userIdInput?.value || '',
-          ticket_id: ticketIdInput?.value || '',
-          sort: sortSelect?.value || 'updated_desc',
-          per_page: perPageSelect?.value || '20',
-          page: 1
-        });
+    function applyFilters() {
+      updateQuery(collectFilterQuery());
+    }
+
+    if (applyBtn) {
+      applyBtn.addEventListener('click', applyFilters);
+    }
+
+    if (qInput) {
+      qInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          applyFilters();
+        }
       });
-    });
+    }
 
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
@@ -227,6 +245,9 @@
       if (e.key === 'Escape') closeContextMenu();
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && qInput) {
         e.preventDefault();
+        if (filtersModalEl && window.bootstrap?.Modal) {
+          window.bootstrap.Modal.getOrCreateInstance(filtersModalEl).show();
+        }
         qInput.focus();
         qInput.select();
       }
