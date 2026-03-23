@@ -1621,14 +1621,14 @@ def get_user_router() -> Router:
         except TelegramBadRequest:
             pass
 
-    @user_router.callback_query(F.data.startswith("connect_apps_"))
+    @user_router.callback_query(F.data.startswith("connect_direct_"))
     @registration_required
-    async def connect_apps_handler(callback: types.CallbackQuery):
+    async def connect_direct_handler(callback: types.CallbackQuery):
         await callback.answer()
         key_id = int(callback.data.split("_")[2])
         
         try:
-            # Получаем данные ключа для формирования ссылки подключения
+            # Получаем данные ключа
             key_data = get_key_by_id(key_id)
             if not key_data:
                 await callback.message.edit_text("❌ Ключ не найден")
@@ -1639,129 +1639,25 @@ def get_user_router() -> Router:
                 await callback.message.edit_text("❌ Ошибка на сервере. Не удалось получить данные ключа.")
                 return
                 
-            connection_string = details['connection_string']
+            subscription_url = details['connection_string']  # Это уже HTTPS ссылка типа https://host:port/user/uuid
             
-            await callback.message.edit_text(
-                "🔗 <b>Выберите установленное приложение:</b>\n\n"
-                "После выбора приложения будет сформирована ссылка для автоматического подключения",
-                reply_markup=keyboards.create_connect_apps_keyboard(key_id),
-                disable_web_page_preview=True
-            )
-        except Exception as e:
-            logger.error(f"Ошибка в обработчике connect_apps: {e}")
-            try:
-                await callback.message.edit_text("❌ Произошла ошибка. Попробуйте еще раз.")
-            except:
-                pass
-
-    @user_router.callback_query(F.data.startswith("connect_v2rayng_"))
-    @registration_required
-    async def connect_v2rayng_handler(callback: types.CallbackQuery):
-        await callback.answer()
-        key_id = int(callback.data.split("_")[2])
-        await handle_app_connection(callback, key_id, "v2rayng")
-
-    @user_router.callback_query(F.data.startswith("connect_happ_"))
-    @registration_required
-    async def connect_happ_handler(callback: types.CallbackQuery):
-        await callback.answer()
-        key_id = int(callback.data.split("_")[2])
-        await handle_app_connection(callback, key_id, "happ")
-
-    @user_router.callback_query(F.data.startswith("connect_v2box_"))
-    @registration_required
-    async def connect_v2box_handler(callback: types.CallbackQuery):
-        await callback.answer()
-        key_id = int(callback.data.split("_")[2])
-        await handle_app_connection(callback, key_id, "v2box")
-
-    @user_router.callback_query(F.data.startswith("connect_v2rayn_"))
-    @registration_required
-    async def connect_v2rayn_handler(callback: types.CallbackQuery):
-        await callback.answer()
-        key_id = int(callback.data.split("_")[2])
-        await handle_app_connection(callback, key_id, "v2rayn")
-
-    @user_router.callback_query(F.data.startswith("connect_happ_desktop_"))
-    @registration_required
-    async def connect_happ_desktop_handler(callback: types.CallbackQuery):
-        await callback.answer()
-        key_id = int(callback.data.split("_")[2])
-        await handle_app_connection(callback, key_id, "happ_desktop")
-
-    def _build_one_click_url(app: str, key_id: int, user_id: int) -> str | None:
-        try:
-            dom_val = get_setting("domain")
-            domain = (dom_val or "").strip() if isinstance(dom_val, str) else str(dom_val or "")
-            if not domain:
-                return None
-            base = domain.rstrip("/")
-            ts = int(datetime.utcnow().timestamp())
-            secret = (os.getenv("SHOPBOT_DEEPLINK_SECRET") or get_setting("deeplink_secret") or "").strip()
-            if not secret:
-                # Автогенерация секрета в БД (чтобы не требовать ручной env-настройки)
-                try:
-                    generated = secrets.token_hex(32)
-                    update_setting("deeplink_secret", generated)
-                    secret = generated
-                except Exception:
-                    secret = ""
-            if not secret:
-                return None
-            payload = f"{app}|{key_id}|{user_id}|{ts}"
-            sig = hashlib.sha256((payload + "|" + secret).encode("utf-8")).hexdigest()[:24]
-            return f"{base}/open/{app}?key_id={key_id}&uid={user_id}&ts={ts}&sig={sig}"
-        except Exception:
-            return None
-
-    async def handle_app_connection(callback: types.CallbackQuery, key_id: int, app: str):
-        """One-click connect через HTTPS endpoint /open/<app> (Telegram-safe)."""
-        try:
-            user_id = callback.from_user.id
-            one_click_url = _build_one_click_url(app=app, key_id=key_id, user_id=user_id)
-            if not one_click_url:
-                await callback.message.edit_text(
-                    "❌ One-click подключение пока недоступно.\n\n"
-                    "🔧 **Что нужно сделать:**\n"
-                    "1. Откройте веб-панель администратора в браузере\n"
-                    "2. Панель автоматически сохранит домен в настройках\n"
-                    "3. После этого one-click ссылки заработают\n\n"
-                    "📝 **Альтернативный вариант:**\n"
-                    "В админке → Настройки → укажите домен вручную в поле 'domain'\n\n"
-                    "💡 *После настройки домена все ссылки будут работать через HTTPS, "
-                    "что безопасно и совместимо с Telegram.*"
-                )
-                return
-
-            app_names = {
-                "v2rayng": "V2RayNG",
-                "happ": "Happ",
-                "v2box": "V2Box",
-                "v2rayn": "V2RayN",
-                "happ_desktop": "Happ Desktop",
-            }
-            app_name = app_names.get(app, app)
-
+            # Создаем кнопку с прямой HTTPS ссылкой на подписку
             builder = InlineKeyboardBuilder()
-            builder.button(text="🔗 Подключиться (1 клик)", url=one_click_url)
-            builder.button(text="⬅️ Назад", callback_data=f"connect_apps_{key_id}")
+            builder.button(text="🔗 Открыть подписку", url=subscription_url)
+            builder.button(text="⬅️ Назад к ключу", callback_data=f"show_key_{key_id}")
             builder.adjust(1, 1)
 
             await callback.message.edit_text(
-                f"🔗 <b>{app_name}</b>\n\n"
-                f"📱 Нажмите кнопку ниже — откроется браузер и автоматически предложит открыть приложение.\n\n"
-                f"🔄 Если Happ не открывается:\n"
-                f"• Попробуйте альтернативную ссылку на странице\n"
-                f"• Убедитесь что приложение установлено\n"
-                f"• Для Happ Desktop используйте vless:// ссылку",
+                "🔗 <b>Подписка клиента</b>\n\n"
+                "📱 Нажмите кнопку ниже — откроется ваша подписка в браузере.",
                 reply_markup=builder.as_markup(),
                 disable_web_page_preview=True,
             )
         except Exception as e:
-            logger.error(f"Ошибка при формировании one-click ссылки: {e}")
+            logger.error(f"Ошибка в обработчике connect_direct: {e}")
             try:
-                await callback.message.edit_text("❌ Произошла ошибка при формировании ссылки подключения.")
-            except Exception:
+                await callback.message.edit_text("❌ Произошла ошибка. Попробуйте еще раз.")
+            except:
                 pass
 
     @user_router.callback_query(F.data.startswith("copy_config_"))
@@ -1781,21 +1677,16 @@ def get_user_router() -> Router:
                 await callback.message.edit_text("❌ Ошибка на сервере. Не удалось получить данные ключа.")
                 return
                 
-            connection_string = details['connection_string']
+            subscription_url = details['connection_string']
             
             # Создаем кнопку для копирования
             builder = InlineKeyboardBuilder()
-            builder.button(text="⬅️ Назад к выбору", callback_data=f"connect_apps_{key_id}")
+            builder.button(text="⬅️ Назад к ключу", callback_data=f"show_key_{key_id}")
             
             await callback.message.edit_text(
-                f"📋 <b>Конфигурация скопирована</b>\n\n"
-                f"Нажмите на текст ниже и удерживайте для копирования:\n"
-                f"<code>{connection_string}</code>\n\n"
-                f"💡 <b>Как использовать:</b>\n"
-                f"1. Откройте V2Ray приложение\n"
-                f"2. Нажмите '+' или 'Добавить профиль'\n"
-                f"3. Вставьте скопированную конфигурацию\n"
-                f"4. Сохраните и подключитесь",
+                f"📋 <b>Ссылка на подписку</b>\n\n"
+                f"Ссылка для копирования:\n"
+                f"<code>{subscription_url}</code>",
                 reply_markup=builder.as_markup(),
                 disable_web_page_preview=True
             )

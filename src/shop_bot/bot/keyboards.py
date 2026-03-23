@@ -852,12 +852,12 @@ def create_keys_management_keyboard(keys: list) -> InlineKeyboardMarkup:
 def create_key_info_keyboard(key_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="⬇️ Скачать приложение", callback_data=f"download_apps_{key_id}")
-    builder.button(text="🔗 Подключиться", callback_data=f"connect_apps_{key_id}")
+    builder.button(text="🔗 Подключиться", callback_data=f"connect_direct_{key_id}")
     builder.button(text=(get_setting("btn_extend_key") or "➕ Продлить этот ключ"), callback_data=f"extend_key_{key_id}")
-    builder.button(text=(get_setting("btn_show_qr") or "� Показать QR-код"), callback_data=f"show_qr_{key_id}")
+    builder.button(text=(get_setting("btn_show_qr") or "📱 Показать QR-код"), callback_data=f"show_qr_{key_id}")
     builder.button(text=(get_setting("btn_switch_server") or "🌍 Сменить сервер"), callback_data=f"switch_server_{key_id}")
-    builder.button(text=(get_setting("btn_back_to_keys") or "⬅️ Назад к списку ключей"), callback_data="manage_keys")
-    builder.adjust(2, 2, 2)
+    builder.button(text=(get_setting("btn_back_to_menu") or "⬅️ Назад в меню"), callback_data="back_to_main_menu")
+    builder.adjust(2, 2, 2, 1)
     return builder.as_markup()
 
 def create_howto_vless_keyboard() -> InlineKeyboardMarkup:
@@ -896,18 +896,6 @@ def create_download_apps_keyboard(key_id: int) -> InlineKeyboardMarkup:
     builder.button(text="🍎 Happ (macOS)", url="https://github.com/Happ-proxy/happ-desktop/releases/latest/download/Happ.macOS.universal.dmg")
     builder.button(text=(get_setting("btn_back_to_key") or "⬅️ Назад к ключу"), callback_data=f"show_key_{key_id}")
     builder.adjust(2, 2, 2, 2, 1)
-    return builder.as_markup()
-
-def create_connect_apps_keyboard(key_id: int) -> InlineKeyboardMarkup:
-    """Клавиатура для выбора установленного приложения для подключения"""
-    builder = InlineKeyboardBuilder()
-    builder.button(text="📱 V2RayNG", callback_data=f"connect_v2rayng_{key_id}")
-    builder.button(text="📱 Happ", callback_data=f"connect_happ_{key_id}")
-    builder.button(text="🍎 V2Box", callback_data=f"connect_v2box_{key_id}")
-    builder.button(text="💻 V2RayN", callback_data=f"connect_v2rayn_{key_id}")
-    builder.button(text="💻 Happ Desktop", callback_data=f"connect_happ_desktop_{key_id}")
-    builder.button(text=(get_setting("btn_back_to_key") or "⬅️ Назад к ключу"), callback_data=f"show_key_{key_id}")
-    builder.adjust(2, 2, 2, 1)
     return builder.as_markup()
 
 def create_back_to_menu_keyboard() -> InlineKeyboardMarkup:
