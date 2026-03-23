@@ -140,21 +140,6 @@
       window.location.search = params.toString();
     }
 
-    const paramsOnLoad = new URLSearchParams(window.location.search);
-    const statusOnLoad = paramsOnLoad.get('status');
-    if (statusOnLoad === 'open') {
-      paramsOnLoad.set('status', 'closed');
-      paramsOnLoad.set('page', '1');
-      window.location.replace(window.location.pathname + '?' + paramsOnLoad.toString());
-      return;
-    }
-    if (!statusOnLoad) {
-      paramsOnLoad.set('status', 'closed');
-      paramsOnLoad.set('page', '1');
-      window.location.replace(window.location.pathname + '?' + paramsOnLoad.toString());
-      return;
-    }
-
     let searchTimer;
     if (qInput) {
       qInput.addEventListener('input', () => {
@@ -189,7 +174,7 @@
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         updateQuery({
-          status: 'closed',
+          status: 'all',
           q: '',
           user_id: '',
           ticket_id: '',
