@@ -9,6 +9,7 @@ import json
 import base64
 import asyncio
 import hashlib
+import secrets
 
 from urllib.parse import urlencode
 from hmac import compare_digest
@@ -55,6 +56,7 @@ from shop_bot.data_manager.database import (
     redeem_promo_code,
     update_promo_code_status,
     get_admin_ids,
+    update_setting,
 )
 from shop_bot.config import (
     CHOOSE_PLAN_MESSAGE,
@@ -1695,7 +1697,15 @@ def get_user_router() -> Router:
                 return None
             base = domain.rstrip("/")
             ts = int(datetime.utcnow().timestamp())
-            secret = (os.getenv("SHOPBOT_DEEPLINK_SECRET") or get_setting("telegram_bot_token") or "").strip()
+            secret = (os.getenv("SHOPBOT_DEEPLINK_SECRET") or get_setting("deeplink_secret") or "").strip()
+            if not secret:
+                # Автогенерация секрета в БД (чтобы не требовать ручной env-настройки)
+                try:
+                    generated = secrets.token_hex(32)
+                    update_setting("deeplink_secret", generated)
+                    secret = generated
+                except Exception:
+                    secret = ""
             if not secret:
                 return None
             payload = f"{app}|{key_id}|{user_id}|{ts}"

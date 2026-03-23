@@ -64,6 +64,7 @@ ALL_SETTINGS_KEYS = [
     "telegram_bot_username", "admin_telegram_id", "yookassa_shop_id",
     "yookassa_secret_key", "sbp_enabled", "receipt_email", "cryptobot_token",
     "heleket_merchant_id", "heleket_api_key", "domain", "referral_percentage",
+    "deeplink_secret",
     "referral_discount", "ton_wallet_address", "tonapi_key", "force_subscription", "trial_enabled", "trial_duration_days", "enable_referrals", "minimum_withdrawal",
     # Реферальные начисления: альтернативный фиксированный бонус
     "enable_fixed_referral_bonus", "fixed_referral_bonus_amount",
@@ -122,10 +123,24 @@ def create_webhook_app(bot_controller_instance):
     csrf.init_app(flask_app)
 
     def _oneclick_secret() -> str:
+        env_val = (os.getenv('SHOPBOT_DEEPLINK_SECRET') or '').strip()
+        if env_val:
+            return env_val
         try:
-            return (os.getenv('SHOPBOT_DEEPLINK_SECRET') or get_setting('telegram_bot_token') or '').strip()
+            stored = (get_setting('deeplink_secret') or '').strip()
         except Exception:
-            return (os.getenv('SHOPBOT_DEEPLINK_SECRET') or '').strip()
+            stored = ''
+        if stored:
+            return stored
+        try:
+            generated = secrets.token_hex(32)
+            try:
+                update_setting('deeplink_secret', generated)
+            except Exception as e:
+                logger.warning(f"Failed to persist deeplink_secret: {e}")
+            return generated
+        except Exception:
+            return ''
 
     def _oneclick_sig(app: str, key_id: int, uid: int, ts: int) -> str:
         secret = _oneclick_secret()
