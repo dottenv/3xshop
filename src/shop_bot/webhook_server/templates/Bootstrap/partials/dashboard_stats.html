@@ -1,0 +1,30 @@
+<div class="row row-deck">
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="stat-number text-primary">{{ stats.users_count or 0 }}</div>
+            <div class="stat-label">Пользователи</div>
+            <i class="bi bi-people stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="stat-number text-success">{{ stats.keys_count or 0 }}</div>
+            <div class="stat-label">Ключи</div>
+            <i class="bi bi-key stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="stat-number text-info">{{ stats.total_spent or 0 }}₽</div>
+            <div class="stat-label">Общая сумма</div>
+            <i class="bi bi-currency-exchange stat-icon"></i>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="stat-number text-warning">{{ stats.open_tickets or 0 }}</div>
+            <div class="stat-label">Открытые тикеты</div>
+            <i class="bi bi-headset stat-icon"></i>
+        </div>
+    </div>
+</div>
