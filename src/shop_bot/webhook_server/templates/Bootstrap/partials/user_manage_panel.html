@@ -38,23 +38,31 @@
 </div>
 
 <div class="mb-3">
-  <div class="d-flex flex-column flex-sm-row gap-2">
+  <div class="row g-2">
     {% if user.is_banned %}
-    <form class="w-100 w-sm-auto flex-sm-fill" action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline-success btn-sm w-100"><i class="bi bi-check-circle me-1"></i>Разбанить</button>
-    </form>
+    <div class="col-12 col-sm-6 col-lg-3">
+      <form action="{{ url_for('unban_user_route', user_id=user.telegram_id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-success btn-sm w-100"><i class="bi bi-check-circle me-1"></i>Разбанить</button>
+      </form>
+    </div>
     {% else %}
-    <form class="w-100 w-sm-auto flex-sm-fill" action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post" data-confirm="Забанить пользователя?">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline-warning btn-sm w-100"><i class="bi bi-slash-circle me-1"></i>Забанить</button>
-    </form>
+    <div class="col-12 col-sm-6 col-lg-3">
+      <form action="{{ url_for('ban_user_route', user_id=user.telegram_id) }}" method="post" data-confirm="Забанить пользователя?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-warning btn-sm w-100"><i class="bi bi-slash-circle me-1"></i>Забанить</button>
+      </form>
+    </div>
     {% endif %}
-    <a class="btn btn-outline-primary btn-sm w-100 w-sm-auto flex-sm-fill" href="{{ url_for('admin_keys_page', user_id=user.telegram_id) }}"><i class="bi bi-key me-1"></i>Выдать ключ</a>
-    <form class="w-100 w-sm-auto flex-sm-fill" action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post" data-confirm="Удалить все ключи пользователя?">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-trash3 me-1"></i>Отозвать</button>
-    </form>
+    <div class="col-12 col-sm-6 col-lg-3">
+      <a class="btn btn-outline-primary btn-sm w-100" href="{{ url_for('admin_keys_page', user_id=user.telegram_id) }}"><i class="bi bi-key me-1"></i>Выдать ключ</a>
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+      <form action="{{ url_for('revoke_keys_route', user_id=user.telegram_id) }}" method="post" data-confirm="Удалить все ключи пользователя?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-trash3 me-1"></i>Отозвать</button>
+      </form>
+    </div>
   </div>
 </div>
 
