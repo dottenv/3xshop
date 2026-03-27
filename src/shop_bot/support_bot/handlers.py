@@ -31,21 +31,38 @@ logger = logging.getLogger(__name__)
 
 # SocketIO helper to notify web panel
 _socketio_instance = None
+_socket_emit_queue = None
 
 def set_socketio_instance(sio):
     """Set SocketIO instance from outside to avoid circular imports."""
     global _socketio_instance
     _socketio_instance = sio
 
+def set_socket_emit_queue(queue_func):
+    """Set queue function for cross-thread socket emissions."""
+    global _socket_emit_queue
+    _socket_emit_queue = queue_func
+
 def emit_ticket_update(ticket_id: int, event_name: str, payload: dict):
-    """Emit SocketIO event to update web panel in real-time."""
-    global _socketio_instance
-    if _socketio_instance is None:
-        return
-    try:
-        _socketio_instance.emit(event_name, payload, room=f"ticket_{int(ticket_id)}")
-    except Exception as e:
-        logger.warning(f"Не удалось отправить SocketIO событие: {e}")
+    """Emit SocketIO event to update web panel in real-time.
+    Uses queue for cross-thread safety.
+    """
+    global _socket_emit_queue, _socketio_instance
+    
+    # Prefer queue for cross-thread safety
+    if _socket_emit_queue is not None:
+        try:
+            _socket_emit_queue(event_name, payload, room=f"ticket_{int(ticket_id)}")
+            return
+        except Exception as e:
+            logger.warning(f"Queue emit failed, trying direct: {e}")
+    
+    # Fallback to direct emit (may not work cross-thread)
+    if _socketio_instance is not None:
+        try:
+            _socketio_instance.emit(event_name, payload, room=f"ticket_{int(ticket_id)}")
+        except Exception as e:
+            logger.warning(f"Не удалось отправить SocketIO событие: {e}")
 
 # Predefined support topics
 SUPPORT_TOPICS = [
@@ -169,9 +186,12 @@ def get_support_router() -> Router:
     router = Router()
 
     def _user_main_reply_kb() -> types.ReplyKeyboardMarkup:
+        """Main reply keyboard with quick topic selection."""
         return types.ReplyKeyboardMarkup(
             keyboard=[
-                [types.KeyboardButton(text="Новое обращение")],
+                [types.KeyboardButton(text="Проблема с подключением"), types.KeyboardButton(text="Низкая скорость")],
+                [types.KeyboardButton(text="Вопрос по оплате"), types.KeyboardButton(text="Проблема с ключом")],
+                [types.KeyboardButton(text="Возврат средств"), types.KeyboardButton(text="Другое")],
                 [types.KeyboardButton(text="Мои обращения")],
             ],
             resize_keyboard=True
@@ -1083,19 +1103,78 @@ def get_support_router() -> Router:
             await message.answer("📝 Кратко опишите тему обращения (например, 'Проблема с подключением')")
             await state.set_state(SupportDialog.waiting_for_subject)
 
-    @router.message(F.text == "📨 Мои обращения", F.chat.type == "private")
+    @router.message(F.text == "Мои обращения", F.chat.type == "private")
     async def my_tickets_text_button(message: types.Message):
         tickets = get_user_tickets(message.from_user.id)
         text = "Ваши обращения:" if tickets else "У вас пока нет обращений."
         rows = []
         if tickets:
             for t in tickets:
-                status_text = "🟢 Открыт" if t.get('status') == 'open' else "🔒 Закрыт"
-                title = f"#{t['ticket_id']} • {status_text}"
+                status_text = "Открыт" if t.get('status') == 'open' else "Закрыт"
+                title = f"#{t['ticket_id']} - {status_text}"
                 if t.get('subject'):
-                    title += f" • {t['subject'][:20]}"
+                    title += f" - {t['subject'][:20]}"
                 rows.append([types.InlineKeyboardButton(text=title, callback_data=f"support_view_{t['ticket_id']}")])
         await message.answer(text, reply_markup=types.InlineKeyboardMarkup(inline_keyboard=rows))
+
+    # Quick topic selection handlers
+    TOPIC_BUTTON_MAP = {
+        "Проблема с подключением": "connection",
+        "Низкая скорость": "speed",
+        "Вопрос по оплате": "payment",
+        "Проблема с ключом": "key",
+        "Возврат средств": "refund",
+        "Другое": "other",
+    }
+
+    @router.message(F.text.in_(TOPIC_BUTTON_MAP.keys()), F.chat.type == "private")
+    async def quick_topic_selection(message: types.Message, bot: Bot, state: FSMContext):
+        """Handle quick topic selection from reply keyboard."""
+        existing = _get_latest_open_ticket(message.from_user.id)
+        if existing:
+            await message.answer(
+                f"У вас уже есть открытый тикет #{existing['ticket_id']}. Продолжайте переписку в нём.",
+                reply_markup=_user_main_reply_kb()
+            )
+            return
+        
+        topic_key = TOPIC_BUTTON_MAP.get(message.text, "other")
+        topic_name = dict(SUPPORT_TOPICS).get(topic_key, "Другое")
+        subject = f"[{topic_key}] {topic_name}"
+        
+        # Create ticket with selected topic
+        user_id = message.from_user.id
+        ticket_id = create_support_ticket(user_id, subject)
+        ticket = get_ticket(ticket_id)
+        
+        # Create forum topic if configured
+        forum_chat_id = None
+        thread_id = None
+        support_forum_chat_id = get_setting("support_forum_chat_id")
+        if support_forum_chat_id and ticket:
+            try:
+                chat_id = int(support_forum_chat_id)
+                author_tag = (
+                    (message.from_user.username and f"@{message.from_user.username}")
+                    or (message.from_user.full_name if message.from_user else None)
+                    or str(message.from_user.id)
+                )
+                topic_name_forum = f"#{ticket_id} {topic_name} - от {author_tag}"
+                forum_topic = await bot.create_forum_topic(chat_id=chat_id, name=topic_name_forum)
+                thread_id = forum_topic.message_thread_id
+                forum_chat_id = chat_id
+                update_ticket_thread_info(ticket_id, str(chat_id), int(thread_id))
+                
+                header = f"Новое обращение\nТикет: #{ticket_id}\nПользователь: @{message.from_user.username or message.from_user.full_name} (ID: {message.from_user.id})\nТема: {topic_name}"
+                await bot.send_message(chat_id=chat_id, text=header, message_thread_id=thread_id, reply_markup=_admin_actions_kb(ticket_id))
+            except Exception as e:
+                logger.warning(f"Не удалось создать форумную тему для тикета {ticket_id}: {e}")
+        
+        await message.answer(
+            f"Тикет #{ticket_id} создан с темой: {topic_name}\nОпишите вашу проблему.",
+            reply_markup=_user_main_reply_kb()
+        )
+        await state.set_state(SupportDialog.waiting_for_message)
 
     @router.message(F.chat.type == "private")
     async def relay_user_message_to_forum(message: types.Message, bot: Bot, state: FSMContext):

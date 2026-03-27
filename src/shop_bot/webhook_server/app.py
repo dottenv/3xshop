@@ -7,6 +7,8 @@ import html as html_escape
 import base64
 import time
 import uuid
+import threading
+import queue
 from hmac import compare_digest
 from datetime import datetime, timedelta
 from functools import wraps
@@ -17,6 +19,9 @@ from flask_socketio import SocketIO, join_room, leave_room, emit
 import secrets
 import urllib.parse
 import urllib.request
+
+# Global queue for cross-thread socket emissions
+_socket_emit_queue = queue.Queue()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
@@ -124,11 +129,41 @@ def create_webhook_app(bot_controller_instance):
     )
     flask_app.extensions['socketio'] = socketio
     
+    # Background thread to process socket emits from other threads
+    def _socket_emit_worker():
+        """Process socket emissions from queue (cross-thread safe)."""
+        while True:
+            try:
+                item = _socket_emit_queue.get(timeout=1.0)
+                if item is None:
+                    continue
+                event_name, payload, room = item
+                try:
+                    socketio.emit(event_name, payload, room=room)
+                except Exception as e:
+                    logger.warning(f"Socket emit error: {e}")
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logger.warning(f"Socket emit worker error: {e}")
+    
+    # Start background thread for socket emissions
+    _socket_thread = threading.Thread(target=_socket_emit_worker, daemon=True)
+    _socket_thread.start()
+    
+    def queue_socket_emit(event_name: str, payload: dict, room: str | None = None):
+        """Queue a socket emit for cross-thread safety."""
+        _socket_emit_queue.put((event_name, payload, room))
+    
+    # Expose queue function for support bot handlers
+    flask_app.extensions['socket_emit_queue'] = queue_socket_emit
+    
     # Initialize socketio for support bot handlers
     try:
-        from shop_bot.support_bot.handlers import set_socketio_instance
+        from shop_bot.support_bot.handlers import set_socketio_instance, set_socket_emit_queue
         set_socketio_instance(socketio)
-        logger.info("SocketIO инициализирован для support bot handlers")
+        set_socket_emit_queue(queue_socket_emit)
+        logger.info("SocketIO и очередь emit инициализированы для support bot handlers")
     except Exception as e:
         logger.warning(f"Не удалось инициализировать SocketIO для support bot: {e}")
     
@@ -1664,10 +1699,8 @@ def create_webhook_app(bot_controller_instance):
         return render_template_with_theme('admin_balance.html', user=user, balance=balance, referrals=referrals, **common_data)
 
     def _emit_ticket_update(ticket_id: int, event_name: str, payload: dict):
-        try:
-            socketio.emit(event_name, payload, room=f"ticket_{int(ticket_id)}")
-        except Exception as e:
-            logger.warning(f"Socket emit error for ticket {ticket_id}: {e}")
+        """Emit socket update via queue for cross-thread safety."""
+        queue_socket_emit(event_name, payload, room=f"ticket_{int(ticket_id)}")
 
     def _notify_ticket_user(ticket: dict, text: str):
         try:
@@ -3064,25 +3097,67 @@ def create_webhook_app(bot_controller_instance):
             user_id = ticket.get('user_id')
             
             try:
-                # Send as document
                 from aiogram.types import BufferedInputFile
                 input_file = BufferedInputFile(file_content, filename=file_name)
+                result = None
+                media_info = None
+                caption = f"Файл от поддержки по тикету #{ticket_id}"
                 
-                future = asyncio.run_coroutine_threadsafe(
-                    bot.send_document(chat_id=int(user_id), document=input_file, caption=f"Файл от поддержки по тикету #{ticket_id}"),
-                    loop
-                )
-                result = future.result(timeout=30)
+                # Send as appropriate type based on content
+                if content_type.startswith('image/'):
+                    future = asyncio.run_coroutine_threadsafe(
+                        bot.send_photo(chat_id=int(user_id), photo=input_file, caption=caption),
+                        loop
+                    )
+                    result = future.result(timeout=30)
+                    media_info = {
+                        "type": "photo",
+                        "file_id": result.photo[-1].file_id,
+                        "file_name": file_name,
+                        "file_size": len(file_content),
+                    }
+                elif content_type.startswith('video/'):
+                    future = asyncio.run_coroutine_threadsafe(
+                        bot.send_video(chat_id=int(user_id), video=input_file, caption=caption),
+                        loop
+                    )
+                    result = future.result(timeout=60)
+                    media_info = {
+                        "type": "video",
+                        "file_id": result.video.file_id,
+                        "file_name": file_name,
+                        "file_size": len(file_content),
+                        "mime_type": content_type
+                    }
+                elif content_type.startswith('audio/'):
+                    future = asyncio.run_coroutine_threadsafe(
+                        bot.send_audio(chat_id=int(user_id), audio=input_file, caption=caption),
+                        loop
+                    )
+                    result = future.result(timeout=60)
+                    media_info = {
+                        "type": "audio",
+                        "file_id": result.audio.file_id,
+                        "file_name": file_name,
+                        "file_size": len(file_content),
+                        "mime_type": content_type
+                    }
+                else:
+                    # Send as document for other types
+                    future = asyncio.run_coroutine_threadsafe(
+                        bot.send_document(chat_id=int(user_id), document=input_file, caption=caption),
+                        loop
+                    )
+                    result = future.result(timeout=30)
+                    media_info = {
+                        "type": "document",
+                        "file_id": result.document.file_id,
+                        "file_name": file_name,
+                        "file_size": len(file_content),
+                        "mime_type": content_type
+                    }
                 
                 # Store media info in database
-                media_info = {
-                    "type": "document",
-                    "file_id": result.document.file_id,
-                    "file_name": file_name,
-                    "file_size": len(file_content),
-                    "mime_type": content_type
-                }
-                
                 add_support_message(
                     ticket_id=ticket_id,
                     sender='admin',
@@ -3091,17 +3166,45 @@ def create_webhook_app(bot_controller_instance):
                     media_group_id=None
                 )
                 
-                # Notify web panel
-                _emit_ticket_update(ticket_id, "ticket_message", {
+                # Mirror to forum if available
+                forum_chat_id = ticket.get('forum_chat_id')
+                thread_id = ticket.get('message_thread_id')
+                if forum_chat_id and thread_id:
+                    try:
+                        if content_type.startswith('image/'):
+                            asyncio.run_coroutine_threadsafe(
+                                bot.send_photo(chat_id=int(forum_chat_id), photo=media_info["file_id"], caption=f"Admin: {file_name}", message_thread_id=int(thread_id)),
+                                loop
+                            )
+                        elif content_type.startswith('video/'):
+                            asyncio.run_coroutine_threadsafe(
+                                bot.send_video(chat_id=int(forum_chat_id), video=media_info["file_id"], caption=f"Admin: {file_name}", message_thread_id=int(thread_id)),
+                                loop
+                            )
+                        elif content_type.startswith('audio/'):
+                            asyncio.run_coroutine_threadsafe(
+                                bot.send_audio(chat_id=int(forum_chat_id), audio=media_info["file_id"], caption=f"Admin: {file_name}", message_thread_id=int(thread_id)),
+                                loop
+                            )
+                        else:
+                            asyncio.run_coroutine_threadsafe(
+                                bot.send_document(chat_id=int(forum_chat_id), document=media_info["file_id"], caption=f"Admin: {file_name}", message_thread_id=int(thread_id)),
+                                loop
+                            )
+                    except Exception as e:
+                        logger.warning(f"Could not mirror media to forum: {e}")
+                
+                # Notify web panel via queue
+                queue_socket_emit("ticket_message", {
                     "ticket_id": ticket_id,
                     "sender": "admin",
                     "content": f"Отправлен файл: {file_name}",
                     "media": media_info,
                     "media_group_id": None,
                     "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-                })
+                }, room=f"ticket_{ticket_id}")
                 
-                return jsonify({"ok": True, "file_id": result.document.file_id})
+                return jsonify({"ok": True, "file_id": media_info["file_id"]})
                 
             except Exception as e:
                 logger.error(f"Error sending file to user: {e}")
