@@ -1696,6 +1696,7 @@ def create_webhook_app(bot_controller_instance):
         q = (request.args.get('q') or '').strip()
         user_id = request.args.get('user_id', type=int)
         ticket_id = request.args.get('ticket_id', type=int)
+        topic = (request.args.get('topic') or '').strip()
         sort = (request.args.get('sort') or 'updated_desc').strip()
         tickets, total = get_tickets_paginated(
             page=max(1, page),
@@ -1704,6 +1705,7 @@ def create_webhook_app(bot_controller_instance):
             q=q or None,
             user_id=user_id,
             ticket_id=ticket_id,
+            topic=topic or None,
             sort=sort
         )
         total_pages = max(1, ceil(total / per_page)) if per_page else 1
@@ -1728,6 +1730,7 @@ def create_webhook_app(bot_controller_instance):
             current_page=page,
             total_pages=total_pages,
             filter_status=filter_status,
+            filter_topic=topic,
             q=q,
             filter_user_id=user_id,
             filter_ticket_id=ticket_id,

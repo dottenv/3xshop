@@ -2439,6 +2439,7 @@ def get_tickets_paginated(
     q: str | None = None,
     user_id: int | None = None,
     ticket_id: int | None = None,
+    topic: str | None = None,
     sort: str = 'updated_desc'
 ) -> tuple[list[dict], int]:
     try:
@@ -2471,6 +2472,16 @@ def get_tickets_paginated(
             where_params.append(ticket_id_n)
         except Exception:
             pass
+
+    # Topic filter - match subject prefix
+    topic_n = (topic or '').strip()
+    if topic_n:
+        if topic_n == 'other':
+            # 'other' matches tickets without topic prefix or with [other] prefix
+            where_clauses.append("(subject IS NULL OR subject NOT LIKE '[%' OR subject LIKE '[other]%')")
+        else:
+            where_clauses.append("subject LIKE ?")
+            where_params.append(f"[{topic_n}]%")
 
     q_n = (q or '').strip()
     if q_n:

@@ -1,5 +1,6 @@
 import logging
 import json
+from datetime import datetime
 from aiogram import Bot, Router, F, types, html
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -27,6 +28,16 @@ from shop_bot.data_manager.database import (
 )
 
 logger = logging.getLogger(__name__)
+
+# SocketIO helper to notify web panel
+def emit_ticket_update(ticket_id: int, event_name: str, payload: dict):
+    """Emit SocketIO event to update web panel in real-time."""
+    try:
+        # Import here to avoid circular imports
+        from shop_bot.webhook_server.app import socketio
+        socketio.emit(event_name, payload, room=f"ticket_{int(ticket_id)}")
+    except Exception as e:
+        logger.warning(f"Не удалось отправить SocketIO событие: {e}")
 
 # Predefined support topics
 SUPPORT_TOPICS = [
@@ -152,11 +163,18 @@ def get_support_router() -> Router:
     def _user_main_reply_kb() -> types.ReplyKeyboardMarkup:
         return types.ReplyKeyboardMarkup(
             keyboard=[
-                [types.KeyboardButton(text="✍️ Новое обращение")],
-                [types.KeyboardButton(text="📨 Мои обращения")],
+                [types.KeyboardButton(text="Новое обращение")],
+                [types.KeyboardButton(text="Мои обращения")],
             ],
             resize_keyboard=True
         )
+
+    def _topic_selection_kb() -> types.InlineKeyboardMarkup:
+        """Inline keyboard for topic selection."""
+        buttons = []
+        for topic_key, topic_name in SUPPORT_TOPICS:
+            buttons.append([types.InlineKeyboardButton(text=topic_name, callback_data=f"topic_{topic_key}")])
+        return types.InlineKeyboardMarkup(inline_keyboard=buttons)
 
     def _get_latest_open_ticket(user_id: int) -> dict | None:
         try:
@@ -283,6 +301,15 @@ def get_support_router() -> Router:
                 media=media_info,
                 media_group_id=media_group_id
             )
+            # Notify web panel via SocketIO
+            emit_ticket_update(ticket_id, "ticket_message", {
+                "ticket_id": ticket_id,
+                "sender": "user",
+                "content": message.text or message.caption or "",
+                "media": media_info,
+                "media_group_id": media_group_id,
+                "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            })
             ticket = get_ticket(ticket_id)
         else:
             ticket_id = create_support_ticket(user_id, subject)
