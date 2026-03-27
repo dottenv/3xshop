@@ -179,6 +179,13 @@ def create_webhook_app(bot_controller_instance):
     # CSRF защита для всех POST форм в панели; вебхуки будут исключены
     csrf = CSRFProtect()
     csrf.init_app(flask_app)
+    
+    # Exempt API endpoints from CSRF
+    @flask_app.before_request
+    def csrf_exempt_api():
+        """Exempt API endpoints from CSRF protection."""
+        if request.path.startswith('/api/') or request.path.startswith('/support/') and '.json' in request.path:
+            csrf.protect = lambda: None
 
     def _detect_public_base_url() -> str | None:
         """Detect external base URL of this panel.

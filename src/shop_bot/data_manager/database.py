@@ -2297,6 +2297,7 @@ def add_support_message(ticket_id: int, sender: str, content: str, media: dict |
         with sqlite3.connect(DB_FILE) as conn:
             cursor = conn.cursor()
             media_json = json.dumps(media) if media else None
+            logging.debug(f"add_support_message: ticket_id={ticket_id}, sender={sender}, media={media_json}")
             cursor.execute(
                 "INSERT INTO support_messages (ticket_id, sender, content, media, media_group_id) VALUES (?, ?, ?, ?, ?)",
                 (ticket_id, sender, content, media_json, media_group_id)
@@ -2306,6 +2307,7 @@ def add_support_message(ticket_id: int, sender: str, content: str, media: dict |
                 (ticket_id,)
             )
             conn.commit()
+            logging.debug(f"add_support_message: successfully inserted message_id={cursor.lastrowid}")
             return cursor.lastrowid
     except sqlite3.Error as e:
         logging.error(f"Не удалось add support message to ticket {ticket_id}: {e}")

@@ -106,6 +106,7 @@ def extract_media_info(message: types.Message) -> dict | None:
             "height": photo.height,
             "file_size": photo.file_size,
         }
+        logger.debug(f"Extracted photo media: {photo.file_id}")
     elif message.video:
         video = message.video
         media_info = {
@@ -118,6 +119,7 @@ def extract_media_info(message: types.Message) -> dict | None:
             "file_size": video.file_size,
             "mime_type": video.mime_type,
         }
+        logger.debug(f"Extracted video media: {video.file_id}")
     elif message.document:
         doc = message.document
         media_info = {
@@ -128,6 +130,7 @@ def extract_media_info(message: types.Message) -> dict | None:
             "file_size": doc.file_size,
             "mime_type": doc.mime_type,
         }
+        logger.debug(f"Extracted document media: {doc.file_id}")
     elif message.audio:
         audio = message.audio
         media_info = {
@@ -140,6 +143,7 @@ def extract_media_info(message: types.Message) -> dict | None:
             "file_size": audio.file_size,
             "mime_type": audio.mime_type,
         }
+        logger.debug(f"Extracted audio media: {audio.file_id}")
     elif message.voice:
         voice = message.voice
         media_info = {
@@ -150,6 +154,7 @@ def extract_media_info(message: types.Message) -> dict | None:
             "file_size": voice.file_size,
             "mime_type": voice.mime_type,
         }
+        logger.debug(f"Extracted voice media: {voice.file_id}")
     elif message.video_note:
         vn = message.video_note
         media_info = {
@@ -160,6 +165,12 @@ def extract_media_info(message: types.Message) -> dict | None:
             "duration": vn.duration,
             "file_size": vn.file_size,
         }
+        logger.debug(f"Extracted video_note media: {vn.file_id}")
+    
+    if media_info:
+        logger.debug(f"Media info extracted: {media_info}")
+    else:
+        logger.debug("No media found in message")
     
     return media_info
 
@@ -199,6 +210,17 @@ async def create_forum_topic_for_ticket(bot: Bot, ticket_id: int, ticket: dict, 
     
     try:
         chat_id = int(support_forum_chat_id)
+        
+        # Check if chat is actually a forum
+        try:
+            chat_info = await bot.get_chat(chat_id)
+            if not hasattr(chat_info, 'is_forum') or not chat_info.is_forum:
+                logger.warning(f"Chat {chat_id} is not a forum, skipping topic creation")
+                return None
+        except Exception as e:
+            logger.warning(f"Could not verify if chat {chat_id} is a forum: {e}")
+            return None
+        
         author_tag = (
             (message.from_user.username and f"@{message.from_user.username}")
             or (message.from_user.full_name if message.from_user else None)
