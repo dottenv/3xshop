@@ -1,5 +1,31 @@
 {% for t in tickets %}
-<tr class="ticket-row" data-ticket-id="{{ t.ticket_id }}" data-status="{{ t.status }}">
+{% set topic_key = '' %}
+{% set topic_name = '' %}
+{% set topic_colors = {'connection': 'topic-connection', 'speed': 'topic-speed', 'payment': 'topic-payment', 'key': 'topic-key', 'refund': 'topic-refund', 'other': 'topic-other'} %}
+{% set topic_names = {'connection': 'Подключение', 'speed': 'Скорость', 'payment': 'Оплата', 'key': 'Ключ', 'refund': 'Возврат', 'other': 'Другое'} %}
+
+{% if t.subject %}
+  {% if t.subject.startswith('[connection]') %}
+    {% set topic_key = 'connection' %}
+  {% elif t.subject.startswith('[speed]') %}
+    {% set topic_key = 'speed' %}
+  {% elif t.subject.startswith('[payment]') %}
+    {% set topic_key = 'payment' %}
+  {% elif t.subject.startswith('[key]') %}
+    {% set topic_key = 'key' %}
+  {% elif t.subject.startswith('[refund]') %}
+    {% set topic_key = 'refund' %}
+  {% else %}
+    {% set topic_key = 'other' %}
+  {% endif %}
+{% else %}
+  {% set topic_key = 'other' %}
+{% endif %}
+
+{% set topic_name = topic_names.get(topic_key, 'Другое') %}
+{% set topic_class = topic_colors.get(topic_key, 'topic-other') %}
+
+<tr class="ticket-row" data-ticket-id="{{ t.ticket_id }}" data-status="{{ t.status }}" data-topic="{{ topic_key }}">
   <td>
     {% if t.status == 'open' %}
       <span class="badge text-bg-success">Открыт</span>
@@ -9,7 +35,12 @@
   </td>
   <td class="text-nowrap">#{{ t.ticket_id }}</td>
   <td class="text-nowrap">{{ t.user_id }}</td>
-  <td>{{ t.subject or 'Без темы' }}</td>
+  <td>
+    <span class="ticket-topic-badge {{ topic_class }}">{{ topic_name }}</span>
+    {% if t.subject and not t.subject.startswith('[') %}
+      <span class="text-muted ms-1">{{ t.subject }}</span>
+    {% endif %}
+  </td>
   <td class="text-nowrap">{{ t.updated_at }}</td>
   <td class="text-end">
     <button type="button" class="btn btn-sm btn-outline-primary btn-open-ticket" data-ticket-id="{{ t.ticket_id }}">

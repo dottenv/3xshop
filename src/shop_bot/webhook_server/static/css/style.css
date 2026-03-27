@@ -1518,6 +1518,127 @@ body.login-page {
 .header-controls .bot-control p { margin:0; line-height:1; }
 .user-session-controls { display:flex; align-items:center; gap:12px; }
 
+/* ===== Support Chat Media Styles ===== */
+.support-media {
+  margin-bottom: 8px;
+}
+
+.support-media img,
+.support-media video {
+  max-width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+.support-media.photo img {
+  object-fit: cover;
+}
+
+.support-media.video video,
+.support-media.video-note video {
+  background: #000;
+}
+
+.support-media.document a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.support-media.audio audio,
+.support-media.voice audio {
+  display: block;
+  border-radius: 8px;
+}
+
+/* Media grouping in chat */
+[data-media-group] {
+  margin-bottom: 4px;
+}
+
+[data-media-group]:last-of-type {
+  margin-bottom: 8px;
+}
+
+/* Topic badge styles for support tickets */
+.ticket-topic-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ticket-topic-badge.topic-connection {
+  background-color: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.ticket-topic-badge.topic-speed {
+  background-color: rgba(255, 146, 43, 0.15);
+  color: #ff922b;
+  border: 1px solid rgba(255, 146, 43, 0.3);
+}
+
+.ticket-topic-badge.topic-payment {
+  background-color: rgba(81, 207, 102, 0.15);
+  color: #51cf66;
+  border: 1px solid rgba(81, 207, 102, 0.3);
+}
+
+.ticket-topic-badge.topic-key {
+  background-color: rgba(116, 192, 252, 0.15);
+  color: #74c0fc;
+  border: 1px solid rgba(116, 192, 252, 0.3);
+}
+
+.ticket-topic-badge.topic-refund {
+  background-color: rgba(173, 181, 189, 0.15);
+  color: #adb5bd;
+  border: 1px solid rgba(173, 181, 189, 0.3);
+}
+
+.ticket-topic-badge.topic-other {
+  background-color: rgba(174, 62, 201, 0.15);
+  color: #ae3ec9;
+  border: 1px solid rgba(174, 62, 201, 0.3);
+}
+
+[data-bs-theme='light'] .ticket-topic-badge.topic-connection {
+  background-color: rgba(255, 107, 107, 0.1);
+  color: #e03131;
+}
+
+[data-bs-theme='light'] .ticket-topic-badge.topic-speed {
+  background-color: rgba(255, 146, 43, 0.1);
+  color: #d9480f;
+}
+
+[data-bs-theme='light'] .ticket-topic-badge.topic-payment {
+  background-color: rgba(81, 207, 102, 0.1);
+  color: #2b8a3e;
+}
+
+[data-bs-theme='light'] .ticket-topic-badge.topic-key {
+  background-color: rgba(116, 192, 252, 0.1);
+  color: #1971c2;
+}
+
+[data-bs-theme='light'] .ticket-topic-badge.topic-refund {
+  background-color: rgba(173, 181, 189, 0.1);
+  color: #495057;
+}
+
+[data-bs-theme='light'] .ticket-topic-badge.topic-other {
+  background-color: rgba(174, 62, 201, 0.1);
+  color: #9c36b5;
+}
+
+/* ===== End Support Chat Media Styles ===== */
+
 /* ====== Мобильная адаптация шапки и бургера ====== */
 @media (max-width: 992px) {
   /* Скрываем центральную навигацию, используем бургер */

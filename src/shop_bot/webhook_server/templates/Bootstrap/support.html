@@ -109,6 +109,18 @@
             </select>
           </div>
           <div class="col-5">
+            <label class="form-label small mb-1" for="support-topic">Тема</label>
+            <select id="support-topic" class="form-select form-select-sm">
+              <option value="" {% if not filter_topic %}selected{% endif %}>Все темы</option>
+              <option value="connection" {% if filter_topic == 'connection' %}selected{% endif %}>Подключение</option>
+              <option value="speed" {% if filter_topic == 'speed' %}selected{% endif %}>Скорость</option>
+              <option value="payment" {% if filter_topic == 'payment' %}selected{% endif %}>Оплата</option>
+              <option value="key" {% if filter_topic == 'key' %}selected{% endif %}>Ключ</option>
+              <option value="refund" {% if filter_topic == 'refund' %}selected{% endif %}>Возврат</option>
+              <option value="other" {% if filter_topic == 'other' %}selected{% endif %}>Другое</option>
+            </select>
+          </div>
+          <div class="col-6">
             <label class="form-label small mb-1" for="support-per-page">На странице</label>
             <select id="support-per-page" class="form-select form-select-sm">
               <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
@@ -200,6 +212,7 @@
         q: qInput?.value.trim() || '',
         user_id: userIdInput?.value || '',
         ticket_id: ticketIdInput?.value || '',
+        topic: topicSelect?.value || '',
         sort: sortSelect?.value || 'updated_desc',
         per_page: perPageSelect?.value || '20',
         page: 1
@@ -230,6 +243,7 @@
           q: '',
           user_id: '',
           ticket_id: '',
+          topic: '',
           sort: 'updated_desc',
           per_page: '20',
           page: 1
