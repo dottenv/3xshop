@@ -324,6 +324,15 @@ def get_support_router() -> Router:
                 media=media_info,
                 media_group_id=media_group_id
             )
+            # Notify web panel via SocketIO
+            emit_ticket_update(ticket_id, "ticket_message", {
+                "ticket_id": ticket_id,
+                "sender": "user",
+                "content": message.text or message.caption or "",
+                "media": media_info,
+                "media_group_id": media_group_id,
+                "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            })
             ticket = get_ticket(ticket_id)
             created_new = True
         support_forum_chat_id = get_setting("support_forum_chat_id")
@@ -490,6 +499,15 @@ def get_support_router() -> Router:
             media=media_info,
             media_group_id=media_group_id
         )
+        # Notify web panel via SocketIO
+        emit_ticket_update(ticket_id, "ticket_message", {
+            "ticket_id": ticket_id,
+            "sender": "user",
+            "content": message.text or message.caption or "",
+            "media": media_info,
+            "media_group_id": media_group_id,
+            "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        })
         await state.clear()
         await message.answer("Сообщение отправлено.")
         try:
