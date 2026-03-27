@@ -1870,7 +1870,9 @@ def create_webhook_app(bot_controller_instance):
                 {
                     "sender": m.get('sender'),
                     "content": m.get('content'),
-                    "created_at": m.get('created_at')
+                    "created_at": m.get('created_at'),
+                    "media": json.loads(m.get('media')) if m.get('media') else None,
+                    "media_group_id": m.get('media_group_id')
                 }
                 for m in messages
             ]
@@ -2069,6 +2071,8 @@ def create_webhook_app(bot_controller_instance):
             'ticket_id': ticket_id,
             'sender': 'admin',
             'content': message,
+            'media': None,
+            'media_group_id': None,
             'created_at': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         }
         _emit_ticket_update(ticket_id, "ticket_message", payload)
@@ -2956,6 +2960,55 @@ def create_webhook_app(bot_controller_instance):
         except Exception as e:
             logger.error(f"Ошибка получения статуса обновлений: {e}")
             return jsonify({"error": str(e)}), 500
+
+    @flask_app.route('/api/telegram/file/<file_id>')
+    @login_required
+    def telegram_file_proxy(file_id: str):
+        """Proxy to download and serve Telegram files."""
+        try:
+            bot = _support_bot_controller.get_bot_instance()
+            if not bot:
+                return jsonify({"error": "bot_not_available"}), 503
+            
+            loop = current_app.config.get('EVENT_LOOP')
+            if not loop or not loop.is_running():
+                return jsonify({"error": "event_loop_not_running"}), 503
+            
+            # Get file info from Telegram
+            import asyncio
+            future = asyncio.run_coroutine_threadsafe(
+                bot.get_file(file_id),
+                loop
+            )
+            file_obj = future.result(timeout=10)
+            
+            if not file_obj or not file_obj.file_path:
+                return jsonify({"error": "file_not_found"}), 404
+            
+            # Download file content
+            future2 = asyncio.run_coroutine_threadsafe(
+                bot.download_file(file_obj.file_path),
+                loop
+            )
+            file_content = future2.result(timeout=30)
+            
+            if not file_content:
+                return jsonify({"error": "download_failed"}), 500
+            
+            # Determine content type based on file extension
+            import mimetypes
+            content_type = mimetypes.guess_type(file_obj.file_path)[0] or 'application/octet-stream'
+            
+            from io import BytesIO
+            return send_file(
+                BytesIO(file_content),
+                mimetype=content_type,
+                as_attachment=False,
+                download_name=file_obj.file_path.split('/')[-1]
+            )
+        except Exception as e:
+            logger.error(f"Error serving Telegram file {file_id}: {e}")
+            return jsonify({"error": "internal_error"}), 500
 
     return flask_app
 

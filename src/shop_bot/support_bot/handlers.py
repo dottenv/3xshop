@@ -271,17 +271,32 @@ def get_support_router() -> Router:
         subject = raw_subject if raw_subject else "Обращение без темы"
         existing = _get_latest_open_ticket(user_id)
         created_new = False
+        # Extract media info if present
+        media_info = extract_media_info(message)
+        media_group_id = message.media_group_id
         if existing:
             ticket_id = int(existing['ticket_id'])
-            add_support_message(ticket_id, sender="user", content=(message.text or message.caption or ""))
+            add_support_message(
+                ticket_id, 
+                sender="user", 
+                content=(message.text or message.caption or ""),
+                media=media_info,
+                media_group_id=media_group_id
+            )
             ticket = get_ticket(ticket_id)
         else:
             ticket_id = create_support_ticket(user_id, subject)
             if not ticket_id:
-                await message.answer("❌ Не удалось создать обращение. Попробуйте позже.")
+                await message.answer("Не удалось создать обращение. Попробуйте позже.")
                 await state.clear()
                 return
-            add_support_message(ticket_id, sender="user", content=(message.text or message.caption or ""))
+            add_support_message(
+                ticket_id, 
+                sender="user", 
+                content=(message.text or message.caption or ""),
+                media=media_info,
+                media_group_id=media_group_id
+            )
             ticket = get_ticket(ticket_id)
             created_new = True
         support_forum_chat_id = get_setting("support_forum_chat_id")
@@ -438,7 +453,16 @@ def get_support_router() -> Router:
             await message.answer("Нельзя ответить на этот тикет.")
             await state.clear()
             return
-        add_support_message(ticket_id, sender='user', content=(message.text or message.caption or ''))
+        # Extract media info if present
+        media_info = extract_media_info(message)
+        media_group_id = message.media_group_id
+        add_support_message(
+            ticket_id, 
+            sender='user', 
+            content=(message.text or message.caption or ''),
+            media=media_info,
+            media_group_id=media_group_id
+        )
         await state.clear()
         await message.answer("Сообщение отправлено.")
         try:
@@ -545,8 +569,17 @@ def get_support_router() -> Router:
             if not (is_admin_by_setting or is_admin_in_chat):
                 return
             content = (message.text or message.caption or "").strip()
-            if content:
-                add_support_message(ticket_id=int(ticket['ticket_id']), sender='admin', content=content)
+            # Extract media info if present
+            media_info = extract_media_info(message)
+            media_group_id = message.media_group_id
+            if content or media_info:
+                add_support_message(
+                    ticket_id=int(ticket['ticket_id']), 
+                    sender='admin', 
+                    content=content,
+                    media=media_info,
+                    media_group_id=media_group_id
+                )
             header = await bot.send_message(
                 chat_id=user_id,
                 text=f"💬 Ответ поддержки по тикету #{ticket['ticket_id']}"

@@ -246,19 +246,94 @@
         .replace(/'/g, '&#39;');
     }
 
+    function renderMedia(media, mediaGroupId) {
+      if (!media) return '';
+      const type = media.type;
+      const fileId = media.file_id;
+      const groupAttr = mediaGroupId ? `data-media-group="${esc(mediaGroupId)}"` : '';
+      
+      if (type === 'photo') {
+        return `<div class="support-media photo" ${groupAttr}>
+          <img src="/api/telegram/file/${esc(fileId)}" alt="Photo" class="img-fluid rounded" style="max-width:300px;max-height:200px;object-fit:cover;" loading="lazy">
+        </div>`;
+      } else if (type === 'video') {
+        return `<div class="support-media video" ${groupAttr}>
+          <video controls class="rounded" style="max-width:300px;max-height:200px;">
+            <source src="/api/telegram/file/${esc(fileId)}" type="${esc(media.mime_type || 'video/mp4')}">
+          </video>
+        </div>`;
+      } else if (type === 'document') {
+        const fileName = media.file_name || 'Документ';
+        const fileSize = media.file_size ? `(${(media.file_size / 1024).toFixed(1)} KB)` : '';
+        return `<div class="support-media document" ${groupAttr}>
+          <a href="/api/telegram/file/${esc(fileId)}" target="_blank" class="btn btn-sm btn-outline-primary" download="${esc(fileName)}">
+            <i class="bi bi-file-earmark"></i> ${esc(fileName)} ${fileSize}
+          </a>
+        </div>`;
+      } else if (type === 'audio') {
+        const title = media.title || media.performer || 'Аудио';
+        return `<div class="support-media audio" ${groupAttr}>
+          <audio controls class="w-100" style="max-width:300px;">
+            <source src="/api/telegram/file/${esc(fileId)}" type="${esc(media.mime_type || 'audio/mpeg')}">
+          </audio>
+          <div class="small text-muted">${esc(title)}</div>
+        </div>`;
+      } else if (type === 'voice') {
+        return `<div class="support-media voice" ${groupAttr}>
+          <audio controls class="w-100" style="max-width:300px;">
+            <source src="/api/telegram/file/${esc(fileId)}" type="${esc(media.mime_type || 'audio/ogg')}">
+          </audio>
+        </div>`;
+      } else if (type === 'video_note') {
+        return `<div class="support-media video-note" ${groupAttr}>
+          <video controls class="rounded-circle" style="width:200px;height:200px;object-fit:cover;">
+            <source src="/api/telegram/file/${esc(fileId)}" type="video/mp4">
+          </video>
+        </div>`;
+      }
+      return '';
+    }
+
     function renderMessages(items) {
       if (!Array.isArray(items) || !items.length) {
         messagesEl.innerHTML = '<div class="text-center text-muted py-4">Сообщений пока нет</div>';
         return;
       }
-      messagesEl.innerHTML = items.map((m) => {
+      
+      // Group messages by media_group_id
+      const groupedItems = [];
+      let currentGroup = null;
+      
+      items.forEach((m) => {
+        if (m.media_group_id && currentGroup && currentGroup.media_group_id === m.media_group_id) {
+          currentGroup.items.push(m);
+        } else {
+          if (currentGroup) groupedItems.push(currentGroup);
+          currentGroup = {
+            media_group_id: m.media_group_id,
+            items: [m],
+            sender: m.sender,
+            created_at: m.created_at
+          };
+        }
+      });
+      if (currentGroup) groupedItems.push(currentGroup);
+      
+      messagesEl.innerHTML = groupedItems.map((group) => {
+        const m = group.items[0];
         const isAdmin = m.sender === 'admin';
         const align = isAdmin ? 'justify-content-end' : 'justify-content-start';
         const bubbleCls = isAdmin ? 'bg-primary text-white' : 'bg-body border';
+        
+        // Render all media in the group
+        const mediaHtml = group.items.map(item => renderMedia(item.media, item.media_group_id)).join('');
+        const contentHtml = m.content ? `<div class="small" style="white-space:pre-wrap;">${esc(m.content)}</div>` : '';
+        
         return `
           <div class="d-flex ${align}">
             <div class="rounded px-3 py-2 ${bubbleCls}" style="max-width:85%;">
-              <div class="small" style="white-space:pre-wrap;">${esc(m.content)}</div>
+              ${mediaHtml}
+              ${contentHtml}
               <div class="small opacity-75 mt-1">${esc(m.created_at || '')}</div>
             </div>
           </div>
@@ -400,13 +475,29 @@
         if (!payload || Number(payload.ticket_id) !== Number(activeTicketId)) return;
         const current = messagesEl.querySelector('.text-center.text-muted');
         if (current) current.remove();
-        const isAdmin = payload.sender === 'admin';
-        const align = isAdmin ? 'justify-content-end' : 'justify-content-start';
-        const bubbleCls = isAdmin ? 'bg-primary text-white' : 'bg-body border';
-        const wrapper = document.createElement('div');
-        wrapper.className = `d-flex ${align}`;
-        wrapper.innerHTML = `<div class="rounded px-3 py-2 ${bubbleCls}" style="max-width:85%;"><div class="small" style="white-space:pre-wrap;">${esc(payload.content)}</div><div class="small opacity-75 mt-1">${esc(payload.created_at || '')}</div></div>`;
-        messagesEl.appendChild(wrapper);
+        
+        // Check if this message belongs to an existing media group
+        const existingGroup = payload.media_group_id ? 
+          messagesEl.querySelector(`[data-media-group="${esc(payload.media_group_id)}"]`)?.closest('.d-flex') : null;
+        
+        if (existingGroup && payload.media) {
+          // Add media to existing group
+          const bubble = existingGroup.querySelector('.rounded');
+          const mediaHtml = renderMedia(payload.media, payload.media_group_id);
+          bubble.insertAdjacentHTML('afterbegin', mediaHtml);
+        } else {
+          // Create new message bubble
+          const isAdmin = payload.sender === 'admin';
+          const align = isAdmin ? 'justify-content-end' : 'justify-content-start';
+          const bubbleCls = isAdmin ? 'bg-primary text-white' : 'bg-body border';
+          const mediaHtml = renderMedia(payload.media, payload.media_group_id);
+          const contentHtml = payload.content ? `<div class="small" style="white-space:pre-wrap;">${esc(payload.content)}</div>` : '';
+          
+          const wrapper = document.createElement('div');
+          wrapper.className = `d-flex ${align}`;
+          wrapper.innerHTML = `<div class="rounded px-3 py-2 ${bubbleCls}" style="max-width:85%;">${mediaHtml}${contentHtml}<div class="small opacity-75 mt-1">${esc(payload.created_at || '')}</div></div>`;
+          messagesEl.appendChild(wrapper);
+        }
         messagesEl.scrollTop = messagesEl.scrollHeight;
       });
       socket.on('ticket_status', (payload) => {
